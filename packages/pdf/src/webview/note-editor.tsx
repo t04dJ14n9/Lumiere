@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { changedText } from "../shared/note-hover";
 import { MAX_NOTE } from "../shared/selection";
+import { t } from "@workshop/l10n";
 
 const MAC = /Mac|iPhone|iPad/u.test(navigator.userAgent);
 
@@ -64,8 +65,8 @@ export function NoteEditor({
       <textarea
         ref={field}
         className="note-card-input"
-        aria-label="Note"
-        placeholder="Write a note in Markdown"
+        aria-label={t("Note")}
+        placeholder={t("Write a note in Markdown")}
         defaultValue={initial}
         maxLength={Math.max(MAX_NOTE, initial.length)}
         spellCheck
@@ -73,7 +74,7 @@ export function NoteEditor({
         onBlur={keep}
       />
       <div className="note-card-hint">
-        {MAC ? "⌘Enter" : "Ctrl+Enter"} to save · Escape to cancel
+        {t("{0} to save · Escape to cancel", MAC ? "⌘Enter" : "Ctrl+Enter")}
       </div>
     </>
   );

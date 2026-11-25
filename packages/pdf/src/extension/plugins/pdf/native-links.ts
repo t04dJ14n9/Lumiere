@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { realpath } from "node:fs/promises";
 import path from "node:path";
+import { t } from "@workshop/l10n";
 import { parseLocationFragment } from "../../../shared/pdf-location";
 import { registerSourceLinks, type LinkRun } from "./source-links";
 import { deliverNativeLocation } from "./native-delivery";
@@ -54,7 +55,7 @@ async function contained(root: vscode.Uri, target: vscode.Uri): Promise<void> {
     target.scheme !== "file" ||
     root.authority !== target.authority
   ) {
-    throw new Error("Local workspace links only");
+    throw new Error(t("Local workspace links only"));
   }
   const relative = path.relative(
     await realpath(root.fsPath),
@@ -65,6 +66,6 @@ async function contained(root: vscode.Uri, target: vscode.Uri): Promise<void> {
     relative.startsWith(".." + path.sep) ||
     path.isAbsolute(relative)
   ) {
-    throw new Error("Link escapes workspace folder");
+    throw new Error(t("Link escapes workspace folder"));
   }
 }

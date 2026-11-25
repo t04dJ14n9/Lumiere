@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import { PAGE_LAYOUTS, SCROLL_MODES } from "../../../shared/view-options";
 import {
   parseDefaultZoom,
@@ -17,7 +18,7 @@ const VIEW = "lumiere.pdf.view";
 const read = <T>(key: string, fallback: T): T =>
   vscode.workspace.getConfiguration().get<T>(key, fallback);
 const say = (text: string): void =>
-  void vscode.window.setStatusBarMessage(`PDF: ${text}`, 3_000);
+  void vscode.window.setStatusBarMessage(text, 3_000);
 
 type Pick<T> = vscode.QuickPickItem & { value: T };
 
@@ -28,7 +29,9 @@ async function choose<T>(
   current: unknown,
 ): Promise<T | undefined> {
   const items = choices.map((choice) =>
-    choice.value === current ? { ...choice, description: "current" } : choice,
+    choice.value === current
+      ? { ...choice, description: t("current") }
+      : choice,
   );
   return (await vscode.window.showQuickPick(items, { title }))?.value;
 }
@@ -58,9 +61,19 @@ export const pdfSettingsPlugin: Plugin = {
       toggleKeyboardShortcuts: () => toggleKeyboardShortcuts(settings),
       setDefaultZoom: () => setDefaultZoom(settings),
       setDefaultPageLayout: () =>
-        setDefault(settings, "pageLayout", "Default Page Layout", PAGE_LAYOUTS),
+        setDefault(
+          settings,
+          "pageLayout",
+          t("Default Page Layout"),
+          PAGE_LAYOUTS,
+        ),
       setDefaultScrollMode: () =>
-        setDefault(settings, "scrollMode", "Default Scrolling", SCROLL_MODES),
+        setDefault(
+          settings,
+          "scrollMode",
+          t("Default Scrolling"),
+          SCROLL_MODES,
+        ),
     };
     for (const [id, run] of Object.entries(commands)) {
       ctx.own(
@@ -81,28 +94,28 @@ async function toggleSmoothScrolling(settings: PdfSettings): Promise<void> {
     false,
   );
   await settings.update(`${VIEW}.smoothScrolling`, !on);
-  say(`smooth scrolling ${on ? "off" : "on"}`);
+  say(on ? t("PDF: smooth scrolling off") : t("PDF: smooth scrolling on"));
 }
 
 async function toggleKeyboardShortcuts(settings: PdfSettings): Promise<void> {
   const on = read("lumiere.pdf.keyboardShortcuts", true);
   await settings.update("lumiere.pdf.keyboardShortcuts", !on);
-  say(`keyboard shortcuts ${on ? "off" : "on"}`);
+  say(on ? t("PDF: keyboard shortcuts off") : t("PDF: keyboard shortcuts on"));
 }
 
 async function setDefaultZoom(settings: PdfSettings): Promise<void> {
   const current = parseDefaultZoom(read(`${VIEW}.defaultZoom`, "fitWidth"));
   const custom = typeof current === "number";
   const choice = await choose<string>(
-    "Default Zoom",
+    t("Default Zoom"),
     [
-      { label: "Fit width", value: "fitWidth" },
-      { label: "Fit page", value: "fitPage" },
-      { label: "Actual size (100%)", value: "actual" },
+      { label: t("Fit width"), value: "fitWidth" },
+      { label: t("Fit page"), value: "fitPage" },
+      { label: t("Actual size (100%)"), value: "actual" },
       {
         label: custom
-          ? `Custom percentage… (${current}%)`
-          : "Custom percentage…",
+          ? t("Custom percentage… ({0}%)", current)
+          : t("Custom percentage…"),
         value: "custom",
       },
     ],
@@ -115,15 +128,15 @@ async function setDefaultZoom(settings: PdfSettings): Promise<void> {
     return settings.update(`${VIEW}.defaultZoom`, choice);
   }
   const text = await vscode.window.showInputBox({
-    title: "Default Zoom",
-    prompt: "A percentage from 25 to 400",
+    title: t("Default Zoom"),
+    prompt: t("A percentage from 25 to 400"),
     value: custom ? String(current) : "100",
     validateInput: (value) =>
       Number.isFinite(Number(value)) &&
       Number(value) >= 25 &&
       Number(value) <= 400
         ? undefined
-        : "Enter a number from 25 to 400",
+        : t("Enter a number from 25 to 400"),
   });
   if (text !== undefined) {
     await settings.update(`${VIEW}.defaultZoom`, Number(text));

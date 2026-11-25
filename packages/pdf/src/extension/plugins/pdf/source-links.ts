@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import { LinkTickets, type Ticket } from "./link-tickets";
 import { nativeLinks, localFragment } from "../../../shared/native-links";
 
@@ -134,7 +135,7 @@ async function boundedResult(
   } catch (error) {
     if (run.current()) {
       void vscode.window.showWarningMessage(
-        `Could not open precise link: ${String(error)}`,
+        t("Could not open precise link: {0}", String(error)),
       );
     }
     return false;
@@ -175,7 +176,7 @@ async function follow(
   await options.authorize(root, target);
   const stat = await vscode.workspace.fs.stat(target);
   if (!(stat.type & vscode.FileType.File)) {
-    throw new Error("Target is not a file");
+    throw new Error(t("Target is not a file"));
   }
   if (!run.current()) {
     return false;

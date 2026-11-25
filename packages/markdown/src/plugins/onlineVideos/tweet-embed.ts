@@ -1,4 +1,5 @@
 import type { Tweet } from "./parse";
+import { t } from "@workshop/l10n";
 
 /** The light or dark the tweet widget is drawn in, from the editor's theme. */
 export type EmbedTheme = "light" | "dark";
@@ -127,7 +128,7 @@ export function embedView(
       referrerpolicy: "strict-origin-when-cross-origin",
       loading: "lazy",
       scrolling: "no",
-      title: `Tweet ${tweet.id}`,
+      title: t("Tweet {0}", tweet.id),
     },
   };
 }

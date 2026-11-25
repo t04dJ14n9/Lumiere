@@ -6,6 +6,7 @@ import { errorMessage } from "../../shared/errors";
 import type { Disposer } from "@workshop/core";
 import type { WorkerChannel, WorkerLauncher } from "../../shared/workers";
 import type { MatchLine } from "./match-lines";
+import { t } from "@workshop/l10n";
 /** Whether a document matched, and a hit's content lines. */
 export interface SearchVerdict {
   matched: boolean;
@@ -118,7 +119,7 @@ export class SearchWorker implements SearchEvaluator {
     });
     this.channel = channel;
     this.startupTimer = setTimeout(
-      () => this.fail(new Error("Search worker startup timed out")),
+      () => this.fail(new Error(t("Search worker startup timed out"))),
       this.options.startupMs ?? 15000,
     );
     channel.onMessage((message) => {
@@ -133,7 +134,7 @@ export class SearchWorker implements SearchEvaluator {
     });
     channel.onExit((code) => {
       if (channel === this.channel) {
-        this.fail(new Error(`Search worker exited (${code})`));
+        this.fail(new Error(t("Search worker exited ({0})", code)));
       }
     });
   }
@@ -184,7 +185,7 @@ export class SearchWorker implements SearchEvaluator {
       request.reject(
         pendingId === id
           ? new SearchTimeoutError(path)
-          : new Error("Search evaluation was interrupted"),
+          : new Error(t("Search evaluation was interrupted")),
       );
     }
     this.pending.clear();

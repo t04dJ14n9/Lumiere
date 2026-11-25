@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { test } from "node:test";
 import { runInNewContext } from "node:vm";
 import ts from "typescript";
+import * as l10n from "@workshop/l10n";
 import * as locations from "../../src/shared/pdf-location";
 import * as placement from "../../src/shared/open-placement";
 import * as targets from "../../src/shared/pdf-target-resolution";
@@ -164,6 +165,7 @@ function harness(
   const modules: Record<string, unknown> = {
     "node:path": path,
     vscode,
+    "@workshop/l10n": l10n,
     "../../../shared/open-placement": placement,
     "../../../shared/pdf-location": locations,
     "../../../shared/pdf-target-resolution": targets,

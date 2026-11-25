@@ -18,6 +18,7 @@ import { bindDiscoveredRoot, canonicalPath } from "./git-discovered-watch";
 import { exceedsDiffLimits } from "../shared/diff";
 import { baselineFailure } from "../shared/git";
 import type { GitAccess, GitBaselineResult, GitRef } from "../shared/git";
+import { t } from "@workshop/l10n";
 
 /** Cached HEAD texts, by total length, so the cache cannot grow without bound. */
 const CACHE_CHARS = 8_000_000;
@@ -159,7 +160,8 @@ export class NativeGitAccess implements GitAccess {
       if (text === undefined) {
         return { status: "tooLarge" };
       }
-      const label = ref === "HEAD" ? `HEAD (${commit!.slice(0, 7)})` : "Index";
+      const label =
+        ref === "HEAD" ? t("HEAD ({0})", commit!.slice(0, 7)) : t("Index");
       return { status: "ok", baseline: { text, label } };
     } catch (error) {
       return { status: baselineFailure(error) };

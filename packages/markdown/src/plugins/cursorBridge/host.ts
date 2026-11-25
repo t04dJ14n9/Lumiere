@@ -23,12 +23,10 @@ import {
   registerEditPromptProbe,
   type EditPromptProbe,
 } from "./edit-prompt-probe";
+import { t } from "@workshop/l10n";
 
 const IS_CURSOR_HOST = contributionId("isCursorHost");
 const DISMISS_EDIT_MIRROR = contributionId("cursorBridge.dismissEditMirror");
-const DISMISS_STATUS_TEXT = "$(markdown) Return to Lumiere";
-const DISMISS_STATUS_TOOLTIP =
-  "Close the Edit mirror and return to Live Preview";
 
 export interface CursorBridgeConfig {
   readonly appName: string;
@@ -166,11 +164,7 @@ async function runChatWithSelection(
   // check and Cursor invocation in the same synchronous turn.
   if (!handoff.ok) {
     await abandonChatMirror(config.surface, uri, handoff);
-    ctx.dialogs.error(
-      handoff.reason === "changed"
-        ? "The note changed before Cursor could use the selection."
-        : "Could not mirror the selection into Cursor’s editor.",
-    );
+    ctx.dialogs.error(mirrorProblem(handoff.reason));
     return;
   }
   const confirmed = confirmActiveEditor(handoff.editor, uri, selection);
@@ -178,11 +172,7 @@ async function runChatWithSelection(
     await abandonEditHandoff(config.surface, uri, handoff.lease, {
       restore: true,
     });
-    ctx.dialogs.error(
-      confirmed.reason === "changed"
-        ? "The note changed before Cursor could use the selection."
-        : "Could not mirror the selection into Cursor’s editor.",
-    );
+    ctx.dialogs.error(mirrorProblem(confirmed.reason));
     return;
   }
   try {
@@ -207,11 +197,7 @@ async function runEdit(
 ): Promise<void> {
   const prepared = await prepareNativeMirror(config.surface, uri, selection);
   if (!prepared.ok) {
-    ctx.dialogs.error(
-      prepared.reason === "changed"
-        ? "The note changed before Cursor could use the selection."
-        : "Could not mirror the selection into Cursor’s editor.",
-    );
+    ctx.dialogs.error(mirrorProblem(prepared.reason));
     return;
   }
   if (config.isStopped) {
@@ -240,11 +226,7 @@ async function runEdit(
     const confirmed = confirmActiveEditor(editor, uri, selection);
     if (!confirmed.ok) {
       await cleanup.abandon();
-      ctx.dialogs.error(
-        confirmed.reason === "changed"
-          ? "The note changed before Cursor could use the selection."
-          : "Could not mirror the selection into Cursor’s editor.",
-      );
+      ctx.dialogs.error(mirrorProblem(confirmed.reason));
       return;
     }
     // Use the focused editor and selection from show. overrideUri forces a
@@ -275,14 +257,14 @@ async function runChat(
     commands,
   );
   if (target === "clipboard") {
-    ctx.dialogs.inform("Selection copied. Paste it into Cursor Chat.");
+    ctx.dialogs.inform(t("Selection copied. Paste it into Cursor Chat."));
     return;
   }
   if (target === "unavailable") {
-    ctx.dialogs.error("Cursor Chat is not available in this window.");
+    ctx.dialogs.error(t("Cursor Chat is not available in this window."));
   } else if (target === "chatFallback" && text) {
     ctx.dialogs.inform(
-      "Opened Cursor Chat. Paste the selection if it was not attached.",
+      t("Opened Cursor Chat. Paste the selection if it was not attached."),
     );
   }
 }
@@ -304,29 +286,40 @@ async function runEditFallbackChat(
     commands,
   );
   if (target === "unavailable") {
-    ctx.dialogs.error("Cursor Edit is not available in this window.");
+    ctx.dialogs.error(t("Cursor Edit is not available in this window."));
     return;
   }
   if (target === "clipboard") {
     ctx.dialogs.inform(
-      "Cursor Edit is unavailable. Selection copied — paste it into Cursor Chat.",
+      t(
+        "Cursor Edit is unavailable. Selection copied — paste it into Cursor Chat.",
+      ),
     );
     return;
   }
   ctx.dialogs.inform(
     text
-      ? "Cursor Edit is unavailable. Opened Chat — paste the selection if it was not attached."
-      : "Cursor Edit is unavailable. Opened Chat instead.",
+      ? t(
+          "Cursor Edit is unavailable. Opened Chat — paste the selection if it was not attached.",
+        )
+      : t("Cursor Edit is unavailable. Opened Chat instead."),
   );
 }
 
 function showDismissStatus(session: BridgeSession, uri: string): void {
   session.dismissStatusUri = uri;
   session.dismissStatus.show(
-    DISMISS_STATUS_TEXT,
-    DISMISS_STATUS_TOOLTIP,
+    t("$(markdown) Return to Lumiere"),
+    t("Close the Edit mirror and return to Live Preview"),
     DISMISS_EDIT_MIRROR,
   );
+}
+
+/** Why the selection could not be mirrored into Cursor's editor, for the reader. */
+function mirrorProblem(reason: string): string {
+  return reason === "changed"
+    ? t("The note changed before Cursor could use the selection.")
+    : t("Could not mirror the selection into Cursor’s editor.");
 }
 
 function hideDismissStatus(session: BridgeSession, uri: string): void {

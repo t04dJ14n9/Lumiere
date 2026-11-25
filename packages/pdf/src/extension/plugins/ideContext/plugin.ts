@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
@@ -94,7 +95,7 @@ async function activePacket(
 ) {
   const panel = panels.active;
   if (!panel) {
-    void vscode.window.showWarningMessage("Open a PDF first");
+    void vscode.window.showWarningMessage(t("Open a PDF first"));
     return undefined;
   }
   const selected = panel.selectionSnapshot() ?? undefined;
@@ -136,7 +137,7 @@ async function sendDeps(): Promise<SendIdeContextDeps> {
     showQuickPick: async (items) => {
       const pick = await vscode.window.showQuickPick(
         items.map((item) => ({ label: item.label, id: item.id })),
-        { title: "Send IDE Context to…" },
+        { title: t("Send IDE Context to…") },
       );
       return pick?.id;
     },

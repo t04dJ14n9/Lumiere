@@ -16,6 +16,7 @@ import { lookUpPageAt } from "./look-up-pages";
 import { requestNoteEdit } from "./note-edit-request";
 import { currentPageColors } from "./page-colors";
 import type { SetAnnotationRegion } from "./selection";
+import { t } from "@workshop/l10n";
 
 /** What the context menu does with marks, and how it finds the one it was opened on. */
 export interface MarkMenu {
@@ -111,7 +112,10 @@ function menuOver(state: MenuState): MarkMenu {
     },
     markSelection: (tool) => {
       if (annotation) {
-        void report("mark the text", annotation.createFromSelection(tool));
+        void report(
+          (reason) => t("Could not mark the text: {0}", reason),
+          annotation.createFromSelection(tool),
+        );
       }
     },
     highlightWithNote: () => {
@@ -125,7 +129,10 @@ function menuOver(state: MenuState): MarkMenu {
               requestNoteEdit({ ref: first.ref });
             }
           });
-        void report("mark the text", made);
+        void report(
+          (reason) => t("Could not mark the text: {0}", reason),
+          made,
+        );
       }
     },
     editNote: () => withMark(state, (mark) => editNote(state, mark)),
@@ -134,7 +141,10 @@ function menuOver(state: MenuState): MarkMenu {
     deleteMark: () =>
       withMark(state, (mark, api) => {
         forget();
-        void report("delete the annotation", api.delete(mark.ref));
+        void report(
+          (reason) => t("Could not delete the annotation: {0}", reason),
+          api.delete(mark.ref),
+        );
       }),
   };
 }
@@ -175,7 +185,10 @@ function setColor(
   if (mark.subtype === "highlight") {
     state.latest.current.setHighlightColor(color);
   }
-  void report("change the colour", annotation.update(mark.ref, patch));
+  void report(
+    (reason) => t("Could not change the colour: {0}", reason),
+    annotation.update(mark.ref, patch),
+  );
 }
 
 /**
@@ -240,15 +253,18 @@ function useForgetOnPress(forget: () => void): void {
   }, [forget]);
 }
 
-function report(what: string, work: Promise<unknown>): Promise<void> {
+function report(
+  message: (reason: string) => string,
+  work: Promise<unknown>,
+): Promise<void> {
   return work.then(
     () => undefined,
     (error: unknown) => {
       postToHost({
         type: "error",
-        message: `Could not ${what}: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
+        message: message(
+          error instanceof Error ? error.message : String(error),
+        ),
       });
     },
   );

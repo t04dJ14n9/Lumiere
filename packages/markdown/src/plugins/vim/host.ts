@@ -2,6 +2,7 @@ import type { Plugin } from "@workshop/core";
 import type { PanelPort, PanelShell } from "../../shared/host";
 import type {} from "../editor/api";
 import { protocol } from "./protocol";
+import { t } from "@workshop/l10n";
 
 /**
  * The panel's side: tells the editor whether the window's status bar will
@@ -35,7 +36,7 @@ export const vimHost: Plugin = {
     const render = (panel: PanelPort | undefined = ctx.editors.active()) => {
       const text = panel && texts.get(panel.id);
       if (text) {
-        status.show(text, "Vim mode");
+        status.show(text, t("Vim mode"));
       } else {
         status.hide();
       }

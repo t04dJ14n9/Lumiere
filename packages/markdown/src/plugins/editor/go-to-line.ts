@@ -10,6 +10,7 @@ import type { Context } from "@workshop/core";
 import { SourceCoordinates } from "../../shared/document/coordinates";
 import { contributionId } from "../../shared/setting-schema";
 import type { Editors } from "./api";
+import { t } from "@workshop/l10n";
 
 const GO_TO_LINE_COMMAND = contributionId("goToLine");
 
@@ -81,11 +82,11 @@ async function goToLine(
       // Keep line 1 when capture fails (webview not ready).
     }
     const text = await ctx.dialogs.input({
-      prompt: `Type a line number between 1 and ${lineCount}`,
+      prompt: t("Type a line number between 1 and {0}", lineCount),
       value: String(current),
       validate: (value) =>
         parseLineInput(value, lineCount) === undefined
-          ? `Type a line number between 1 and ${lineCount}`
+          ? t("Type a line number between 1 and {0}", lineCount)
           : undefined,
     });
     if (text === undefined) {

@@ -3,6 +3,7 @@ import type { ActiveEditor, HostCommands } from "../../shared/host";
 import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
 import { contributionId } from "../../shared/setting-schema";
 import type { EditorPanel, Editors } from "./api";
+import { t } from "@workshop/l10n";
 
 /**
  * Host deps for the Ctrl/Cmd+E toggle. Kept as a pick so unit tests can
@@ -59,7 +60,7 @@ async function openPanelAsText(
     await host.serial("document/willSave", panel.session);
     await panel.session.flush(panel.id);
     if (!panel.active()) {
-      throw new Error("The editor lost focus before the command completed.");
+      throw new Error(t("The editor lost focus before the command completed."));
     }
     await host.hostCommands.execute("vscode.openWith", uri, "default");
   });

@@ -6,6 +6,7 @@ import { protocol } from "./protocol";
 import { TitleRenames } from "./rename";
 import { titleFromSource } from "./title";
 import manifest from "./manifest";
+import { t } from "@workshop/l10n";
 
 /** Root host half owns independent panel transfers across native recreation. */
 export const inlineTitleHost: Plugin = {
@@ -81,7 +82,7 @@ class InlineTitles {
           const message =
             error instanceof Error
               ? error.message
-              : "The note could not be renamed.";
+              : t("The note could not be renamed.");
           this.options.host.dialogs.error(message);
           return {
             title: titleFromSource(panel.document.uri),

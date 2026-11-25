@@ -15,6 +15,7 @@ import type { Disposer } from "@workshop/core";
 import { shouldReclaimExplorerOpen } from "../attachments";
 import { MARKDOWN_EDITOR } from "../shared/editor-provider";
 import type { ExplorerAttachmentReclaimHandlers } from "../shared/host";
+import { t } from "@workshop/l10n";
 
 /**
  * Watch tab opens and convert matching pinned media tabs into attachments on
@@ -95,6 +96,7 @@ function reclaimOffer(
   return { resource, column, lumiereUri };
 }
 
+/** The English text of the button, the key of its translation (`t` below). */
 export const ADD_TO_NOTE = "Add to Note";
 
 /** Ask; on "Add to Note", close the media tab and insert the embed. */
@@ -103,11 +105,16 @@ async function offerAttachment(
   tab: vscode.Tab,
   offer: ReclaimOffer,
 ): Promise<void> {
+  const add = t("Add to Note");
   const choice = await vscode.window.showInformationMessage(
-    `Add ${baseName(offer.resource)} to ${baseName(vscode.Uri.parse(offer.lumiereUri))} as an attachment?`,
-    ADD_TO_NOTE,
+    t(
+      "Add {0} to {1} as an attachment?",
+      baseName(offer.resource),
+      baseName(vscode.Uri.parse(offer.lumiereUri)),
+    ),
+    add,
   );
-  if (choice !== ADD_TO_NOTE) {
+  if (choice !== add) {
     return;
   }
   // Close the workbench's open-on-drop tab; the plugin reveals the note.

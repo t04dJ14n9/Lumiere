@@ -1,9 +1,10 @@
 import { noteFragment } from "../../markdown/metadata/fragments";
+import { t } from "@workshop/l10n";
 
 /** The embedded note exists but has no such heading or block. */
 export class MissingSection extends Error {
   constructor() {
-    super("Embedded section not found");
+    super(t("Embedded section not found"));
   }
 }
 /** Embeds deeper than this are not shown. */
@@ -13,7 +14,9 @@ const MAX_EMBED_DEPTH = 12;
 export class RefusedEmbed extends Error {
   constructor(readonly reason: "circular" | "too deep") {
     super(
-      reason === "circular" ? "Circular embed" : "Embeds nested too deeply",
+      reason === "circular"
+        ? t("Circular embed")
+        : t("Embeds nested too deeply"),
     );
   }
 }

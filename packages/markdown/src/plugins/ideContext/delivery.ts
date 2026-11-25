@@ -11,6 +11,7 @@ import {
   type TempFs,
   type LeaseSidecar,
 } from "@workshop/agents/ide-context";
+import { t } from "@workshop/l10n";
 
 export type QuickPickChoice = "claudeCode" | "codex" | "clipboard" | undefined;
 
@@ -51,7 +52,7 @@ export async function copyIdeContext(
 ): Promise<string> {
   const md = renderMarkdown(packet);
   await clipboardWrite(md);
-  inform?.("IDE context copied");
+  inform?.(t("IDE context copied"));
   return md;
 }
 
@@ -67,7 +68,7 @@ async function pickSendTarget(deps: SendIdeContextDeps): Promise<SendTarget> {
   const pick = await deps.showQuickPick([
     { label: "Claude Code", id: "claudeCode" },
     { label: "Codex", id: "codex" },
-    { label: "Copy only", id: "clipboard" },
+    { label: t("Copy only"), id: "clipboard" },
   ]);
   if (pick === undefined) {
     return "cancelled";
@@ -182,7 +183,7 @@ async function sendCodex(
   const fs = deps.tempFs;
   const fileUri = deps.tempFileUri;
   if (!fs || !fileUri) {
-    deps.inform?.("IDE context copied (Codex temp FS unavailable)");
+    deps.inform?.(t("IDE context copied (Codex temp FS unavailable)"));
     return { markdown: md, opened: "clipboard", softFailWarning: "no temp fs" };
   }
   const published = await publishCodexTemp(packet, deps, fs);
@@ -204,7 +205,7 @@ async function sendCodex(
     sessionId: published.sessionId,
   });
   if (!attached) {
-    deps.inform?.("IDE context copied; Codex attach failed");
+    deps.inform?.(t("IDE context copied; Codex attach failed"));
     return {
       markdown: md,
       opened: "clipboard",
@@ -230,7 +231,7 @@ export async function sendIdeContext(
     return { markdown: md, opened: "cancelled" };
   }
   if (target === "clipboard") {
-    deps.inform?.("IDE context copied");
+    deps.inform?.(t("IDE context copied"));
     return { markdown: md, opened: "clipboard" };
   }
   if (target === "claudeCode") {

@@ -1,5 +1,6 @@
 import type { EditorView } from "@codemirror/view";
 import type { TitleFocus, TitleValue } from "./protocol";
+import { t } from "@workshop/l10n";
 export type { TitleFocus, TitleValue } from "./protocol";
 export interface TitleActions {
   rename(title: string, focus?: TitleFocus): void;
@@ -32,7 +33,7 @@ export class TitleInput {
     this.root.className = "file-title";
     this.input.rows = 1;
     this.input.value = this.confirmed;
-    this.input.setAttribute("aria-label", "Note title");
+    this.input.setAttribute("aria-label", t("Note title"));
     this.input.setAttribute("aria-multiline", "false");
     this.input.enterKeyHint = "done";
     this.input.spellcheck = false;
@@ -72,7 +73,7 @@ export class TitleInput {
     this.input.value = title || this.confirmed;
     this.resize();
     if (title.length > 255) {
-      this.reject("The note title must contain at most 255 characters.");
+      this.reject(t("The note title must contain at most 255 characters."));
       return;
     }
     this.clearError();

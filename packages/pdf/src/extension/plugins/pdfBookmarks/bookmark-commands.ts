@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   bookmarkFileOf,
   type BookmarkFileRef,
@@ -71,8 +72,8 @@ export async function addBookmarkTo(
   }
   // Escape cancels; Enter keeps the title offered.
   const title = await vscode.window.showInputBox({
-    title: "Add Bookmark",
-    prompt: `Title for the bookmark on page ${position.page}`,
+    title: t("Add Bookmark"),
+    prompt: t("Title for the bookmark on page {0}", position.page),
     value: defaultBookmarkTitle(panel.outline, position),
     validateInput: validateBookmarkTitle,
   });
@@ -86,9 +87,13 @@ export async function addBookmarkTo(
     position: { top: position.top, left: position.left },
     created: new Date().toISOString(),
   };
-  if (await attempt("add the bookmark", () => store.add(file, bookmark))) {
+  const added = await attempt(
+    (why) => t("Could not add the bookmark. {0}", why),
+    () => store.add(file, bookmark),
+  );
+  if (added) {
     vscode.window.setStatusBarMessage(
-      `$(bookmark) Added bookmark "${bookmark.title}"`,
+      `$(bookmark) ${t('Added bookmark "{0}"', bookmark.title)}`,
       4000,
     );
   }
@@ -116,7 +121,7 @@ async function readingPlace(
 
 function tellStillOpening(): void {
   void vscode.window.showInformationMessage(
-    "The PDF is still opening. Add the bookmark once it has appeared.",
+    t("The PDF is still opening. Add the bookmark once it has appeared."),
   );
 }
 
@@ -183,9 +188,7 @@ function pickerSource(
         top: bookmark.position.top,
       })?.title,
     remove: async (bookmark) => {
-      await attempt("delete the bookmark", () =>
-        store.remove(file, bookmark.id),
-      );
+      await attempt(couldNotDelete, () => store.remove(file, bookmark.id));
     },
     isCurrent: () => panels.active === panel,
     onDidChange: (listener) => {
@@ -243,7 +246,7 @@ async function readBookmark(
   try {
     return (await store.read(file)).find((bookmark) => bookmark.id === id);
   } catch (error) {
-    tellFailed("read the bookmarks", error);
+    tellFailed((why) => t("Could not read the bookmarks. {0}", why), error);
     return undefined;
   }
 }
@@ -254,15 +257,16 @@ async function rename(
   bookmark: Bookmark,
 ): Promise<void> {
   const title = await vscode.window.showInputBox({
-    title: "Rename Bookmark",
+    title: t("Rename Bookmark"),
     value: bookmark.title,
     validateInput: validateBookmarkTitle,
   });
   if (title === undefined || title.trim() === bookmark.title) {
     return;
   }
-  await attempt("rename the bookmark", () =>
-    store.rename(file, bookmark.id, title),
+  await attempt(
+    (why) => t("Could not rename the bookmark. {0}", why),
+    () => store.rename(file, bookmark.id, title),
   );
 }
 
@@ -273,7 +277,7 @@ async function deleteBookmark(
   const bookmark = parseBookmark(argument);
   const file = bookmarkFileOf(panels.active);
   if (bookmark && file) {
-    await attempt("delete the bookmark", () => store.remove(file, bookmark.id));
+    await attempt(couldNotDelete, () => store.remove(file, bookmark.id));
   }
 }
 
@@ -285,25 +289,31 @@ export async function deleteBookmarkIn(
 ): Promise<void> {
   const file = bookmarkFileOf(panel);
   if (file) {
-    await attempt("delete the bookmark", () => store.remove(file, id));
+    await attempt(couldNotDelete, () => store.remove(file, id));
   }
 }
 
+/** The sentence a failure is told in, given why it failed. */
+type Failure = (why: string) => string;
+
+const couldNotDelete: Failure = (why) =>
+  t("Could not delete the bookmark. {0}", why);
+
 /** Run a change to a bookmark file; a failure is said to the reader, not thrown. */
 async function attempt(
-  what: string,
+  failure: Failure,
   change: () => Promise<void>,
 ): Promise<boolean> {
   try {
     await change();
     return true;
   } catch (error) {
-    tellFailed(what, error);
+    tellFailed(failure, error);
     return false;
   }
 }
 
-function tellFailed(what: string, error: unknown): void {
+function tellFailed(failure: Failure, error: unknown): void {
   const why = error instanceof Error ? error.message : String(error);
-  void vscode.window.showErrorMessage(`Could not ${what}. ${why}`);
+  void vscode.window.showErrorMessage(failure(why));
 }

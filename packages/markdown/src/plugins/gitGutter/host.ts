@@ -4,6 +4,7 @@ import { exceedsDiffLimits } from "../../shared/diff";
 import type { DiffSide } from "../../shared/git-diff";
 import type { GitAccess, GitRef } from "../../shared/git";
 import { protocol } from "./protocol";
+import { t } from "@workshop/l10n";
 
 /**
  * Per-file mutation lock shared by every panel of that file. Not an SCM
@@ -52,14 +53,17 @@ async function saveAndStage(
 ): Promise<boolean> {
   const saved = await panel.document.save().catch(() => false);
   if (!saved) {
-    report("The note could not be saved, so nothing was staged.");
+    report(t("The note could not be saved, so nothing was staged."));
     return false;
   }
   try {
     return await git.stage(panel.document.uri);
   } catch (error) {
     report(
-      `Staging failed: ${error instanceof Error ? error.message : String(error)}`,
+      t(
+        "Staging failed: {0}",
+        error instanceof Error ? error.message : String(error),
+      ),
     );
     return false;
   }

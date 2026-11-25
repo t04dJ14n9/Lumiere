@@ -1,4 +1,5 @@
 import type { Tweet } from "./parse";
+import { t } from "@workshop/l10n";
 
 interface CardOptions {
   /** The image's alt text, if any. */
@@ -20,16 +21,19 @@ export function linkCard(tweet: Tweet, options: CardOptions): HTMLElement {
   const open = document.createElement("button");
   open.type = "button";
   open.className = "mw-embed-card-open";
-  open.textContent = "Open on X";
+  open.textContent = t("Open on X");
   open.title = tweet.page;
   open.addEventListener("click", () => options.open(tweet.page), {
     signal: options.signal,
   });
   card.append(
-    element("mw-embed-card-title", options.label.trim() || "Tweet"),
+    element("mw-embed-card-title", options.label.trim() || t("Tweet")),
     element("mw-embed-card-meta", `X · ${tweet.id}`),
     open,
-    element("mw-embed-card-note", "Embeds are off in an untrusted workspace."),
+    element(
+      "mw-embed-card-note",
+      t("Embeds are off in an untrusted workspace."),
+    ),
   );
   return card;
 }

@@ -5,7 +5,7 @@ import { headerParts } from "../../markdown/properties/header-parts";
 import {
   frontmatterPlaceholderHeight,
   FRONTMATTER_PLACEHOLDER_CLASS,
-  FRONTMATTER_PLACEHOLDER_MARKUP,
+  frontmatterPlaceholderMarkup,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
 import { blockRenderers } from "./registry";
@@ -79,7 +79,7 @@ class FrontmatterPlaceholder extends WidgetType {
     // Mirror collapsed Properties chrome so CSS already on the editor sheet
     // paints a familiar bar; the real PropertyWidget replaces this on configure.
     // minHeight still tracks the expanded estimate so body layout stays put.
-    wrapper.innerHTML = FRONTMATTER_PLACEHOLDER_MARKUP;
+    wrapper.innerHTML = frontmatterPlaceholderMarkup();
     const reserve = this.estimatedHeight;
     if (reserve > 0 && wrapper.style) {
       wrapper.style.minHeight = `${reserve}px`;

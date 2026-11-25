@@ -14,6 +14,7 @@ import { mountHtmlCard } from "./html-embed";
 import { EmbedLives } from "./embed-lives";
 import { vaultEmbedResource } from "./resource-cache";
 import { NearViewport, waitsUntilNear } from "./near-viewport";
+import { t } from "@workshop/l10n";
 
 interface EmbedOptions {
   pass: RenderPass;
@@ -156,7 +157,7 @@ class EmbedPass implements PassEmbeds {
     const { render, resources, pass } = this.options;
     if (/^https?:/i.test(target)) {
       if (!render.trusted) {
-        node.title = "Remote content is disabled in an untrusted workspace";
+        node.title = t("Remote content is disabled in an untrusted workspace");
         return undefined;
       }
       return {
@@ -187,7 +188,7 @@ class EmbedPass implements PassEmbeds {
     button.type = "button";
     button.className = className;
     button.textContent = label;
-    button.setAttribute("aria-label", `Open ${target}`);
+    button.setAttribute("aria-label", t("Open {0}", target));
     button.addEventListener("click", () => this.options.open(target, wiki), {
       signal: this.lives.signal(node),
     });
@@ -330,7 +331,7 @@ class EmbedPass implements PassEmbeds {
     inspect.type = "button";
     inspect.className = "inspect-image";
     inspect.textContent = "⤢";
-    inspect.setAttribute("aria-label", `Inspect image: ${image.alt}`);
+    inspect.setAttribute("aria-label", t("Inspect image: {0}", image.alt));
     const actions = mountImageEmbedActions(image, host, inspect);
     image.addEventListener(
       "dblclick",
@@ -370,7 +371,7 @@ class EmbedPass implements PassEmbeds {
       node,
       mediaRecovery(media, resource.url, (message) => {
         if (this.isActive) {
-          node.textContent = `${target}: ${message}`;
+          node.textContent = t("{0}: {1}", target, message);
           pass.measure();
         }
       }),

@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 const DEFAULT_COPY_FEEDBACK_MS = 1_200;
 
 interface CopyState {
@@ -39,8 +41,8 @@ export async function copyWithFeedback({
     if (state.reset !== undefined) {
       window.clearTimeout(state.reset);
     }
-    button.textContent = "Copied";
-    button.setAttribute("aria-label", "Copied");
+    button.textContent = t("Copied");
+    button.setAttribute("aria-label", t("Copied"));
     button.classList.remove("is-copied");
     void button.offsetWidth;
     button.classList.add("is-copied");
@@ -49,8 +51,8 @@ export async function copyWithFeedback({
       if (!button.isConnected) {
         return;
       }
-      button.textContent = "Copy";
-      button.setAttribute("aria-label", "Copy code");
+      button.textContent = t("Copy");
+      button.setAttribute("aria-label", t("Copy code"));
       button.classList.remove("is-copied");
     }, durationMs);
   } catch (error) {

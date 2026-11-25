@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   formatValue,
   numberProblem,
@@ -35,8 +36,8 @@ export async function changeSetting(settings: PdfSettings): Promise<void> {
     });
   }
   const picked = await vscode.window.showQuickPick(items, {
-    title: "PDF: Change Setting",
-    placeHolder: "Choose a setting to change",
+    title: t("PDF: Change Setting"),
+    placeHolder: t("Choose a setting to change"),
     matchOnDescription: true,
     matchOnDetail: true,
   });
@@ -88,12 +89,12 @@ async function pickTristate(
   current: unknown,
 ): Promise<{ value: boolean | null } | undefined> {
   const choices: (vscode.QuickPickItem & { value: boolean | null })[] = [
-    { label: "On", value: true },
-    { label: "Off", value: false },
-    { label: "Follow the editor", value: null },
+    { label: t("On"), value: true },
+    { label: t("Off"), value: false },
+    { label: t("Follow the editor"), value: null },
   ].map((choice) =>
     choice.value === (current ?? null)
-      ? { ...choice, description: "current" }
+      ? { ...choice, description: t("current") }
       : choice,
   );
   const choice = await vscode.window.showQuickPick(choices, {
@@ -110,7 +111,7 @@ async function pickEnum(
   const choices: vscode.QuickPickItem[] = entry.choices.map((choice) => ({
     label: choice.value,
     ...(choice.description ? { detail: choice.description } : {}),
-    ...(choice.value === current ? { description: "current" } : {}),
+    ...(choice.value === current ? { description: t("current") } : {}),
   }));
   const choice = await vscode.window.showQuickPick(choices, {
     title: entry.title,

@@ -9,6 +9,7 @@ import * as annotationStore from "../../src/shared/annotation-store";
 import * as bookmarks from "../../src/shared/bookmarks";
 import path from "node:path";
 import { test } from "node:test";
+import * as l10n from "@workshop/l10n";
 import * as backlinkNoteUri from "../../src/shared/backlink-note-uri";
 import * as markdownScan from "../../src/shared/markdown-scan";
 import * as backlinkIndex from "../../src/shared/pdf-backlink-index";
@@ -126,6 +127,7 @@ function launch(options: {
       "node:crypto": crypto,
       "node:os": os,
       "node:path": path,
+      "@workshop/l10n": l10n,
       "../../../host/atomic-write": { writeAtomicFile: async () => undefined },
       "../../../shared/annotation-store": annotationStore,
       "../../../shared/bookmarks": bookmarks,

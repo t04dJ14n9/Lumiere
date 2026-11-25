@@ -4,7 +4,7 @@ import { escape } from "../../markdown/html/helpers";
 import {
   frontmatterPlaceholderHeight,
   FRONTMATTER_PLACEHOLDER_CLASS,
-  FRONTMATTER_PLACEHOLDER_MARKUP,
+  frontmatterPlaceholderMarkup,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
 import { headerParts } from "../../markdown/properties/header-parts";
@@ -101,7 +101,7 @@ function frontmatter(
   const height = frontmatterPlaceholderHeight(src.text);
   lines[0] =
     `<div class="${FRONTMATTER_PLACEHOLDER_CLASS}" style="min-height:${height}px">` +
-    `${FRONTMATTER_PLACEHOLDER_MARKUP}</div>`;
+    `${frontmatterPlaceholderMarkup()}</div>`;
   for (let at = 1; at <= src.line(node.to); at++) {
     lines[at] = "";
   }

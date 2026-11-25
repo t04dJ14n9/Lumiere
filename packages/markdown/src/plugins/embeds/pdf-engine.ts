@@ -5,6 +5,7 @@
  */
 import type { LocalEngine } from "@embedpdf/engine";
 import type { OpenedPdf, RenderedPdfPage } from "./pdf-documents";
+import { t } from "@workshop/l10n";
 
 type EngineDocument = Awaited<ReturnType<LocalEngine["open"]>>;
 type PageLayout = Awaited<
@@ -81,7 +82,7 @@ export async function openPdfInEngine(
   try {
     ({ pages } = await pdf.pages.list());
     if (pages.length === 0) {
-      throw new Error("PDF document has no pages");
+      throw new Error(t("PDF document has no pages"));
     }
   } catch (error) {
     await pdf.close().catch(() => undefined);

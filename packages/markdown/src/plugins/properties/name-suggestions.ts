@@ -1,4 +1,5 @@
 import { validPropertyName } from "../../markdown/properties/types";
+import { t } from "@workshop/l10n";
 
 export function propertyNameSuggestions(
   names: readonly string[],
@@ -32,7 +33,7 @@ export class PropertyNameSuggestions {
     this.popup = input.ownerDocument.createElement("div");
     this.popup.className = "property-name-suggestions";
     this.popup.setAttribute("role", "listbox");
-    this.popup.setAttribute("aria-label", "Vault property names");
+    this.popup.setAttribute("aria-label", t("Vault property names"));
     this.popup.id = `property-names-${crypto.getRandomValues(new Uint32Array(1))[0]}`;
     input.setAttribute("aria-controls", this.popup.id);
     input.parentElement!.append(this.popup);

@@ -8,6 +8,7 @@ import {
 } from "../../shared/rpc/lifecycle";
 import type { EditorAction } from "./actions-api";
 import { action } from "./actions-protocol";
+import { t } from "@workshop/l10n";
 interface Entry {
   owner: string;
   value: EditorAction;
@@ -119,7 +120,8 @@ export class ActionRegistry {
         value,
       }));
     const picked = await this.dialogs.pick({
-      placeholder: scope === "selection" ? "Selection actions" : "Note actions",
+      placeholder:
+        scope === "selection" ? t("Selection actions") : t("Note actions"),
       items: (query) =>
         items.filter((item) =>
           item.label.toLowerCase().includes(query.toLowerCase()),

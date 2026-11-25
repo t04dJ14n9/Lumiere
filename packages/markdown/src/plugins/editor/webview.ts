@@ -47,6 +47,7 @@ import {
   placeOpeningSelection,
   type OpeningSelection,
 } from "./opening-selection";
+import { t } from "@workshop/l10n";
 const configurations = new WeakMap<
   Context,
   (value: Infer<typeof editorConfig>) => void
@@ -239,7 +240,7 @@ function createEditorView(
         // Obsidian's editor menu; they run the browser's clipboard commands,
         // which CodeMirror and the paste plugins already handle.
         EditorView.contentAttributes.of({
-          "aria-label": "Markdown content",
+          "aria-label": t("Markdown content"),
           "data-vscode-context": JSON.stringify({
             webviewSection: "markdownContent",
           }),

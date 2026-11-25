@@ -4,6 +4,8 @@ import { WidgetType } from "@codemirror/view";
 import { unifiedRows } from "../../shared/git-diff";
 import type { LineRecord } from "../../shared/git-diff";
 import type { DocHunk } from "./api";
+import { barTooltip } from "./gutter";
+import { t } from "@workshop/l10n";
 
 export interface PeekActions {
   comparisonLabel(): string;
@@ -62,7 +64,7 @@ export class PeekWidget extends WidgetType {
     const root = document.createElement("div");
     root.className = `mw-git-peek mw-git-peek-${this.hunk.kind}`;
     root.setAttribute("role", "region");
-    root.setAttribute("aria-label", "Git change");
+    root.setAttribute("aria-label", t("Git change"));
     root.append(this.header(view), this.body());
     return root;
   }
@@ -71,10 +73,19 @@ export class PeekWidget extends WidgetType {
     head.className = "mw-git-peek-head";
     const title = head.appendChild(document.createElement("span"));
     title.className = "mw-git-peek-title";
-    title.textContent = `Line ${this.line} · ${this.hunk.kind}`;
+    title.textContent = t(
+      "Line {0} · {1}",
+      this.line,
+      barTooltip(this.hunk.kind),
+    );
     const detail = head.appendChild(document.createElement("span"));
     detail.className = "mw-git-peek-detail";
-    detail.textContent = `${this.index + 1} of ${this.total} · ${this.actions.comparisonLabel()}`;
+    detail.textContent = t(
+      "{0} of {1} · {2}",
+      this.index + 1,
+      this.total,
+      this.actions.comparisonLabel(),
+    );
     head.appendChild(document.createElement("span")).className =
       "mw-git-peek-space";
     this.controls(head, view);
@@ -82,34 +93,34 @@ export class PeekWidget extends WidgetType {
   }
   private controls(head: HTMLElement, view: EditorView): void {
     addButton(head, {
-      label: "Previous change",
+      label: t("Previous change"),
       text: "↑",
       run: () => this.actions.move(view, -1),
     });
     addButton(head, {
-      label: "Next change",
+      label: t("Next change"),
       text: "↓",
       run: () => this.actions.move(view, 1),
     });
     addButton(head, {
-      label: "Revert this change",
-      text: "Revert",
+      label: t("Revert this change"),
+      text: t("Revert"),
       run: () => this.actions.revert(view, this.hunk),
       disabled: !this.actions.canRevert(this.hunk),
     });
     addButton(head, {
-      label: "Stage this change",
-      text: "Stage",
+      label: t("Stage this change"),
+      text: t("Stage"),
       run: () => undefined,
       disabled: !this.actions.canStage(this.hunk),
     });
     addButton(head, {
-      label: "Open Full Diff",
-      text: "Open Full Diff",
+      label: t("Open Full Diff"),
+      text: t("Open Full Diff"),
       run: () => this.actions.openFull(view),
     });
     addButton(head, {
-      label: "Close",
+      label: t("Close"),
       text: "✕",
       run: () => this.actions.close(view),
     });

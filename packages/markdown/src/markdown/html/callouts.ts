@@ -1,6 +1,7 @@
 import type { MarkdownIt } from "markdown-it";
 import type { StateCore } from "markdown-it";
 import type { Token } from "markdown-it";
+import { t } from "@workshop/l10n";
 const calloutAliases: Record<string, string> = {
   summary: "abstract",
   tldr: "abstract",
@@ -50,7 +51,7 @@ export function callouts(
         : ` data-callout-metadata="${escapeHtml(data.metadata)}"`
     }`;
     return data.fold
-      ? `<details ${attributes}${data.fold === "+" ? " open" : ""}><summary class="callout-title">${heading}<button type="button" class="callout-fold" aria-label="Toggle callout">›</button></summary><div class="callout-content">`
+      ? `<details ${attributes}${data.fold === "+" ? " open" : ""}><summary class="callout-title">${heading}<button type="button" class="callout-fold" aria-label="${escapeHtml(t("Toggle callout"))}">›</button></summary><div class="callout-content">`
       : `<aside ${attributes}><div class="callout-title">${heading}</div><div class="callout-content">`;
   };
   md.renderer.rules.callout_close = (tokens, index) =>

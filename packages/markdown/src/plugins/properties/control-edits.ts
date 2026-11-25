@@ -1,6 +1,7 @@
 import { frontmatter, type PropertyEdit } from "../../markdown/properties";
 import type { PropertyContext } from "./context";
 import { focusInput } from "./value-input";
+import { t } from "@workshop/l10n";
 
 export type PropertyEditor = PropertyContext["propertyEditor"];
 export interface PropertyControlEdits {
@@ -19,12 +20,14 @@ export function refusalNotice(
   isReadOnly: boolean,
 ): string | undefined {
   if (isReadOnly) {
-    return "This note is read-only, so its properties cannot be changed.";
+    return t("This note is read-only, so its properties cannot be changed.");
   }
   if (operation.type === "add" || operation.type === "rename") {
     return undefined;
   }
-  return "This change could not be applied. Check for duplicate names or YAML aliases, then try again.";
+  return t(
+    "This change could not be applied. Check for duplicate names or YAML aliases, then try again.",
+  );
 }
 
 /** Keep draft blur from racing a structural edit that replaces its input. */

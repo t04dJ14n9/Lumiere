@@ -12,6 +12,7 @@ import {
 import { noteBlocks } from "../../markdown/metadata/note-blocks";
 import type { PdfSection } from "../../shared/pdf-outlines";
 import { rankedCandidates } from "./rank";
+import { t } from "@workshop/l10n";
 const isPdf = (file: VaultFile) => file.extension.toLowerCase() === "pdf";
 /** How many notes `[[^^` reads at once. */
 const READ_BATCH = 16;
@@ -161,7 +162,7 @@ export class SuggestionIndex {
           (entry) =>
             !(
               entry.value.kind === "literal" &&
-              entry.detail === "Unresolved link" &&
+              entry.detail === t("Unresolved link") &&
               entry.value.text.toLowerCase() === query.toLowerCase()
             ),
         );
@@ -250,7 +251,7 @@ export class SuggestionIndex {
     }
     for (const text of unresolved) {
       result.push(
-        candidate(text, "Unresolved link", { kind: "literal", text }),
+        candidate(text, t("Unresolved link"), { kind: "literal", text }),
       );
     }
     return result;

@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import { agentText, pageReferenceText } from "../../../shared/agent-text";
 import {
   pdfBridgeEnvelope,
@@ -57,7 +58,9 @@ export class AgentHandoff {
       }
     }
     if (!text) {
-      void vscode.window.showWarningMessage("Open a PDF page to copy a link.");
+      void vscode.window.showWarningMessage(
+        t("Open a PDF page to copy a link."),
+      );
       return false;
     }
     await vscode.env.clipboard.writeText(text);

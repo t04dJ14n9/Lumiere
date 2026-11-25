@@ -14,6 +14,7 @@ import {
   toggleMarp,
 } from "./actions";
 import type { MarpActions } from "./actions";
+import { t } from "@workshop/l10n";
 
 /** Detects Marp decks and bridges preview and export. It does not render themes. */
 export const marpHost: Plugin = {
@@ -86,7 +87,7 @@ function consider(ctx: Context, panel: PanelPort): void {
       ctx.dialogs.error(
         error instanceof Error
           ? error.message
-          : "Could not open the text editor.",
+          : t("Could not open the text editor."),
       );
     });
 }
@@ -102,7 +103,7 @@ function publishMarp(ctx: Context): void {
 async function previewActive(ctx: Context): Promise<void> {
   const note = activeNote(ctx);
   if (!note) {
-    ctx.dialogs.error("Open a Markdown note to preview it.");
+    ctx.dialogs.error(t("Open a Markdown note to preview it."));
     return;
   }
   await previewDeck(actions(ctx), note.uri);
@@ -111,7 +112,7 @@ async function previewActive(ctx: Context): Promise<void> {
 async function exportActive(ctx: Context): Promise<void> {
   const note = activeNote(ctx);
   if (!note) {
-    ctx.dialogs.error("Open a Marp deck to export it.");
+    ctx.dialogs.error(t("Open a Marp deck to export it."));
     return;
   }
   await exportDeck(actions(ctx), note.uri);
@@ -120,7 +121,7 @@ async function exportActive(ctx: Context): Promise<void> {
 async function toggleActive(ctx: Context): Promise<void> {
   const note = activeNote(ctx);
   if (!note) {
-    ctx.dialogs.error("Open a Markdown note to toggle Marp.");
+    ctx.dialogs.error(t("Open a Markdown note to toggle Marp."));
     return;
   }
   await toggleMarp(actions(ctx), note.document);
@@ -129,7 +130,7 @@ async function toggleActive(ctx: Context): Promise<void> {
 async function keepActive(ctx: Context): Promise<void> {
   const note = activeNote(ctx);
   if (!note) {
-    ctx.dialogs.error("Open a Marp deck to keep it in Lumiere.");
+    ctx.dialogs.error(t("Open a Marp deck to keep it in Lumiere."));
     return;
   }
   await keepDeck(actions(ctx), note.uri);

@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import type { Plugin } from "@workshop/core";
 import { VIEW_COMMAND_IDS } from "../../../shared/command-ids";
 import { isProtectedPdf, PROTECTED_FOLDERS } from "../../protected-folders";
@@ -62,24 +63,29 @@ function attach(panel: PdfPanel): vscode.Disposable {
   let toldAboutPdfAnnotations = false;
   const subscriptions = [
     panel.onAnnotationConflict(async (payload) => {
+      const reload = t("Reload");
+      const keepMine = t("Keep mine");
       const choice = await vscode.window.showWarningMessage(
-        "This PDF changed on disk while you were saving annotations into it.",
+        t(
+          "This PDF changed on disk while you were saving annotations into it.",
+        ),
         { modal: true },
-        "Reload",
-        "Keep mine",
+        reload,
+        keepMine,
       );
-      if (choice === "Reload") {
+      if (choice === reload) {
         await panel.reloadFromDisk();
-      } else if (choice === "Keep mine") {
+      } else if (choice === keepMine) {
         await panel.keepMine(payload);
       }
     }),
     panel.onAnnotationSaveFailed(async () => {
+      const retry = t("Retry");
       const choice = await vscode.window.showErrorMessage(
-        "Could not save PDF annotations.",
-        "Retry",
+        t("Could not save PDF annotations."),
+        retry,
       );
-      if (choice === "Retry") {
+      if (choice === retry) {
         panel.postAnnotationRetry();
       }
     }),
@@ -89,9 +95,11 @@ function attach(panel: PdfPanel): vscode.Disposable {
         return;
       }
       toldAboutPdfAnnotations = true;
-      const save = "Save into This PDF";
+      const save = t("Save into This PDF");
       const choice = await vscode.window.showInformationMessage(
-        "That annotation is part of the PDF file. Lumiere keeps changes to it only if you save them into the PDF.",
+        t(
+          "That annotation is part of the PDF file. Lumiere keeps changes to it only if you save them into the PDF.",
+        ),
         save,
       );
       if (choice === save) {
@@ -105,9 +113,13 @@ function attach(panel: PdfPanel): vscode.Disposable {
 async function saveIntoPdf(panel: PdfPanel): Promise<void> {
   const relative = vscode.workspace.asRelativePath(panel.uri, false);
   if (isProtectedPdf(panel.uri)) {
-    const exportCopy = "Export Annotated Copy…";
+    const exportCopy = t("Export Annotated Copy…");
     const choice = await vscode.window.showWarningMessage(
-      `${relative} is in a protected folder (${PROTECTED_FOLDERS}), so Lumiere does not write it. Its annotations stay in .lumiere/pdf-annotations.`,
+      t(
+        "{0} is in a protected folder ({1}), so Lumiere does not write it. Its annotations stay in .lumiere/pdf-annotations.",
+        relative,
+        PROTECTED_FOLDERS,
+      ),
       exportCopy,
     );
     if (choice === exportCopy) {
@@ -115,13 +127,14 @@ async function saveIntoPdf(panel: PdfPanel): Promise<void> {
     }
     return;
   }
-  const save = "Save into PDF";
+  const save = t("Save into PDF");
   const choice = await vscode.window.showWarningMessage(
-    `Save the annotations into ${relative}?`,
+    t("Save the annotations into {0}?", relative),
     {
       modal: true,
-      detail:
+      detail: t(
         "This rewrites the PDF file, so its SHA-256 changes. Annotations kept for the file as it is now stay kept for that version.",
+      ),
     },
     save,
   );
@@ -142,25 +155,27 @@ async function exportCopy(
   const target = await vscode.window.showSaveDialog({
     defaultUri: vscode.Uri.joinPath(folder, `${name} (annotated).pdf`),
     filters: { PDF: ["pdf"] },
-    saveLabel: "Export",
+    saveLabel: t("Export"),
   });
   if (!target) {
     return;
   }
   if (target.toString() === source.toString()) {
     void vscode.window.showErrorMessage(
-      "Export Annotated Copy writes a new file; use Save Annotations into This PDF to change this one.",
+      t(
+        "Export Annotated Copy writes a new file; use Save Annotations into This PDF to change this one.",
+      ),
     );
     return;
   }
   try {
     await vscode.workspace.fs.writeFile(target, new Uint8Array(data));
     void vscode.window.showInformationMessage(
-      `Exported ${vscode.workspace.asRelativePath(target, false)}.`,
+      t("Exported {0}.", vscode.workspace.asRelativePath(target, false)),
     );
   } catch (error) {
     void vscode.window.showErrorMessage(
-      `Could not export the annotated copy: ${String(error)}`,
+      t("Could not export the annotated copy: {0}", String(error)),
     );
   }
 }

@@ -7,6 +7,7 @@ import {
 } from "../../shared/workspace-path";
 import { scratchFileName } from "./names";
 import { scratchNote } from "./template";
+import { t } from "@workshop/l10n";
 
 export interface ScratchIO {
   readonly files: WorkspaceFiles;
@@ -26,7 +27,7 @@ export async function createScratchNote(
 ): Promise<void> {
   const folder = safeRelative(input.folder);
   if (!folder) {
-    io.error("The scratch folder must stay inside the project.");
+    io.error(t("The scratch folder must stay inside the project."));
     return;
   }
   if (await blocked(io, folder)) {
@@ -36,13 +37,13 @@ export async function createScratchNote(
     directory: folder,
     name: (existing) => scratchFileName(input.title, input.at, existing),
     text: scratchNote(input.title, input.at),
-    outside: "The scratch folder must stay inside the project.",
+    outside: t("The scratch folder must stay inside the project."),
   });
   if (!created) {
     return;
   }
   await io.execute("vscode.open", created.uri);
-  io.inform("Created a scratch note.");
+  io.inform(t("Created a scratch note."));
 }
 
 async function directoryNames(
@@ -107,7 +108,7 @@ async function blocked(io: ScratchIO, relative: string): Promise<boolean> {
     io.files.isSymbolicLink(uri),
   );
   if (linked) {
-    io.error("That path follows a symbolic link. Nothing was written.");
+    io.error(t("That path follows a symbolic link. Nothing was written."));
   }
   return linked;
 }

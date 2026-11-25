@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   PAGE_LAYOUTS,
   SCROLL_DIRECTIONS,
@@ -37,8 +38,8 @@ async function selectView(panels: PdfPanels): Promise<void> {
     return;
   }
   const choice = await vscode.window.showQuickPick(viewChoices(view), {
-    title: "PDF View",
-    placeHolder: "Choose zoom, layout or scrolling",
+    title: t("PDF View"),
+    placeHolder: t("Choose zoom, layout or scrolling"),
   });
   if (!choice || panels.active !== panel) {
     return;
@@ -58,40 +59,41 @@ const section = (label: string): Choice => ({
   kind: vscode.QuickPickItemKind.Separator,
 });
 
-const current = (active: boolean) => (active ? { description: "current" } : {});
+const current = (active: boolean) =>
+  active ? { description: t("current") } : {};
 
 function viewChoices(view: ViewState): Choice[] {
   return [
-    section("Zoom"),
+    section(t("Zoom")),
     {
-      label: "Fit width",
+      label: t("Fit width"),
       ...current(view.fit === "width"),
       action: { action: "fitWidth" },
     },
     {
-      label: "Fit page",
+      label: t("Fit page"),
       ...current(view.fit === "page"),
       action: { action: "fitPage" },
     },
     {
-      label: "Actual size (100%)",
+      label: t("Actual size (100%)"),
       ...current(!view.fit && (view.zoom === 100 || view.zoom === "actual")),
       action: { action: "actualSize" },
     },
-    { label: "Custom percentage…" },
-    section("Page layout"),
+    { label: t("Custom percentage…") },
+    section(t("Page layout")),
     ...PAGE_LAYOUTS.map((item) => ({
       label: item.label,
       ...current(view.pageLayout === item.value),
       action: { action: "setPageLayout", pageLayout: item.value } as const,
     })),
-    section("Scrolling"),
+    section(t("Scrolling")),
     ...SCROLL_MODES.map((item) => ({
       label: item.label,
       ...current(view.scrollMode === item.value),
       action: { action: "setScrollMode", scrollMode: item.value } as const,
     })),
-    section("Direction"),
+    section(t("Direction")),
     ...SCROLL_DIRECTIONS.map((item) => ({
       label: item.label,
       ...current(view.scrollDirection === item.value),
@@ -100,9 +102,9 @@ function viewChoices(view: ViewState): Choice[] {
         scrollDirection: item.value,
       } as const,
     })),
-    section("More"),
+    section(t("More")),
     {
-      label: "$(settings-gear) Settings…",
+      label: `$(settings-gear) ${t("Settings…")}`,
       command: SETTINGS_COMMAND_IDS.openSettings,
     },
   ];

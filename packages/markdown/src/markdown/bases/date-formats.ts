@@ -1,6 +1,7 @@
 import { unsupportedMomentTokens } from "../moment-format";
 import { parseExpr, type ExprNode } from "./ast";
 import type { BaseDefinition, BaseFilter } from "./types";
+import { t } from "@workshop/l10n";
 
 /**
  * The Moment tokens a base's `format("…")` calls use that Lumiere cannot
@@ -85,6 +86,14 @@ function formatPatterns(node: ExprNode | undefined): string[] {
 export function unsupportedDateTokensMessage(
   tokens: readonly string[],
 ): string {
-  const verb = tokens.length === 1 ? "it is" : "they are";
-  return `This base's date format uses ${tokens.join(", ")}, which Lumiere cannot format yet; ${verb} shown as written.`;
+  const formats = tokens.join(", ");
+  return tokens.length === 1
+    ? t(
+        "This base's date format uses {0}, which Lumiere cannot format yet; it is shown as written.",
+        formats,
+      )
+    : t(
+        "This base's date format uses {0}, which Lumiere cannot format yet; they are shown as written.",
+        formats,
+      );
 }

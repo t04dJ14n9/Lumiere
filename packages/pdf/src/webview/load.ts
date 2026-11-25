@@ -4,6 +4,7 @@
  * newest load is opened: a fetch that a later load overtook is dropped.
  */
 import type { HostMessage } from "../shared/messages";
+import { t } from "@workshop/l10n";
 
 type LoadMessage = Extract<HostMessage, { type: "load" }>;
 
@@ -31,7 +32,9 @@ export function createLoadReceiver(
         },
         (error: unknown) => {
           if (load === latest) {
-            target.fail(`The PDF could not be downloaded: ${String(error)}`);
+            target.fail(
+              t("The PDF could not be downloaded: {0}", String(error)),
+            );
           }
         },
       );
@@ -41,7 +44,7 @@ export function createLoadReceiver(
     if (data) {
       target.open(data);
     } else {
-      target.fail("The PDF data from the extension is not readable.");
+      target.fail(t("The PDF data from the extension is not readable."));
     }
   };
 }

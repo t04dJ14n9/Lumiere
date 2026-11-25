@@ -5,6 +5,7 @@ import type { Heading } from "../../markdown/metadata/heading-extract";
 import { chromeInsetTop } from "../../webview/ui/chrome-inset";
 import { pinnedChromeHeight } from "../editor/api";
 import { headingIndex, stickyHeadings } from "./model";
+import { t } from "@workshop/l10n";
 
 export const stickyMaxLines = Facet.define<number, number>({
   combine: (values) => values.at(-1) ?? 5,
@@ -41,7 +42,7 @@ export class StickyScrollView {
   ) {
     this.dom = view.dom.ownerDocument.createElement("nav");
     this.dom.className = "mw-sticky-scroll";
-    this.dom.setAttribute("aria-label", "Sticky headings");
+    this.dom.setAttribute("aria-label", t("Sticky headings"));
     this.dom.hidden = true;
     this.dom.addEventListener("wheel", (event) => this.scroll(event), {
       passive: false,
@@ -224,7 +225,7 @@ export class StickyScrollView {
     const button = this.dom.ownerDocument.createElement("button");
     button.type = "button";
     button.className = "mw-sticky-heading";
-    const label = heading.label || "(Untitled heading)";
+    const label = heading.label || t("(Untitled heading)");
     const lineNumber = this.view.state.doc.lineAt(heading.from).number;
     const line = this.dom.ownerDocument.createElement("span");
     line.className = "mw-sticky-line";
@@ -233,7 +234,7 @@ export class StickyScrollView {
     text.className = "mw-sticky-label";
     text.textContent = label;
     button.append(line, text);
-    button.title = `Go to heading: ${label}`;
+    button.title = t("Go to heading: {0}", label);
     button.dataset.from = String(heading.from);
     button.dataset.label = label;
     button.dataset.line = String(lineNumber);
@@ -281,8 +282,8 @@ export class StickyScrollView {
       this.dom.removeAttribute("title");
       return;
     }
-    const label = heading.label || "(Untitled heading)";
-    const title = `Go to heading: ${label}`;
+    const label = heading.label || t("(Untitled heading)");
+    const title = t("Go to heading: {0}", label);
     this.dom.title = title;
     // Keep the row's own title in sync for assistive tech and native fallbacks.
     const raw = event.target;

@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 export const propertyKinds = [
   "text",
   "list",
@@ -10,16 +12,27 @@ export const propertyKinds = [
 ] as const;
 export type PropertyKind = (typeof propertyKinds)[number];
 export type PropertyTypes = Readonly<Record<string, PropertyKind>>;
-export const propertyKindLabels: Record<PropertyKind, string> = {
-  text: "Text",
-  list: "List",
-  number: "Number",
-  checkbox: "Checkbox",
-  date: "Date",
-  datetime: "Date & time",
-  tags: "Tags",
-  aliases: "Aliases",
-};
+/** What a property type is called, in the reader's language. */
+export function propertyKindLabel(kind: PropertyKind): string {
+  switch (kind) {
+    case "text":
+      return t("Text");
+    case "list":
+      return t("List");
+    case "number":
+      return t("Number");
+    case "checkbox":
+      return t("Checkbox");
+    case "date":
+      return t("Date");
+    case "datetime":
+      return t("Date & time");
+    case "tags":
+      return t("Tags");
+    case "aliases":
+      return t("Aliases");
+  }
+}
 
 export function propertyKind(value: unknown): value is PropertyKind {
   return (

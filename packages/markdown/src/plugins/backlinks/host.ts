@@ -22,6 +22,7 @@ import {
   parseSortOrder,
   type BacklinkSortOrder,
 } from "./tree";
+import { t } from "@workshop/l10n";
 
 /** Refreshes wait for a burst of file events to end. */
 const REFRESH_DELAY_MS = 300;
@@ -50,14 +51,14 @@ function wireRefresh(
     ).catch(() => undefined);
     await source.setNote(ctx.activeEditor.note());
     tree.setMessage(
-      source.hasNote ? undefined : "Open a note to see its backlinks.",
+      source.hasNote ? undefined : t("Open a note to see its backlinks."),
     );
     tree.refresh();
     const count = source.linkedCount();
     if (source.hasNote) {
       status.show(
-        `${count} backlink${count === 1 ? "" : "s"}`,
-        "Notes that link to this note",
+        count === 1 ? t("{0} backlink", count) : t("{0} backlinks", count),
+        t("Notes that link to this note"),
         "lumiere.markdown.backlinks.focus",
       );
     } else {

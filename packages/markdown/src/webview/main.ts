@@ -5,6 +5,7 @@ import { webviewTransport } from "./transport";
 import { Endpoint } from "../shared/rpc/endpoint";
 import { bootstrap } from "./bootstrap";
 import "./styles/index.css";
+import { t } from "@workshop/l10n";
 interface VsCodeApi {
   postMessage(message: unknown): void;
   getState(): unknown;
@@ -42,6 +43,8 @@ void bootstrap(
   logging,
 ).catch((error) => {
   logging.logger.error("Editor bootstrap failed", error);
-  document.getElementById("app")!.textContent =
-    `Lumiere could not open: ${String(error)}`;
+  document.getElementById("app")!.textContent = t(
+    "Lumiere could not open: {0}",
+    String(error),
+  );
 });

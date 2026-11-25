@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import * as os from "node:os";
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import type { PdfAnnotationFiles, PdfFiles } from "../../../shared/host";
 import { bookmarkStoreName } from "../../../shared/bookmarks";
 import {
@@ -32,13 +33,17 @@ export const vscodePdfFiles: PdfFiles &
   writeAtomic: async (uri, bytes) => {
     const parsed = vscode.Uri.parse(uri);
     if (parsed.scheme !== "file") {
-      throw new Error("In-place annotation save requires a local file URI");
+      throw new Error(t("In-place annotation save requires a local file URI"));
     }
     // Checked here as well as in the command: this is the last step before
     // the disk, whatever asked for the write.
     if (isProtectedPdf(parsed)) {
       throw new Error(
-        `${displayPath(parsed)} is in a protected folder (${PROTECTED_FOLDERS}), so Lumiere does not write it`,
+        t(
+          "{0} is in a protected folder ({1}), so Lumiere does not write it",
+          displayPath(parsed),
+          PROTECTED_FOLDERS,
+        ),
       );
     }
     return writeAtomicFile(parsed.fsPath, bytes);
@@ -53,7 +58,7 @@ export const vscodePdfFiles: PdfFiles &
  */
 function sidecarFiles(
   nameOf: (sha256: string) => string,
-  kind: string,
+  kind: "annotations" | "bookmarks",
 ): PdfAnnotationFiles {
   const fileOf = (uri: string, sha256: string) =>
     sidecarFile(vscode.Uri.parse(uri), nameOf(sha256));
@@ -65,7 +70,7 @@ function sidecarFiles(
     write: async (uri, sha256, text) => {
       const file = fileOf(uri, sha256);
       if (!file) {
-        throw new Error(`There is no folder to keep this PDF's ${kind} in`);
+        throw new Error(noFolderMessage(kind));
       }
       if (text === undefined) {
         await vscode.workspace.fs
@@ -98,6 +103,12 @@ function sidecarFiles(
       return file ? watchFile(file, onChange) : () => undefined;
     },
   };
+}
+
+function noFolderMessage(kind: "annotations" | "bookmarks"): string {
+  return kind === "annotations"
+    ? t("There is no folder to keep this PDF's annotations in")
+    : t("There is no folder to keep this PDF's bookmarks in");
 }
 
 /**

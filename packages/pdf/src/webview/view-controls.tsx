@@ -10,6 +10,7 @@ import { parseViewerAction, type ViewerAction } from "../shared/view-state";
 import { MAX_ZOOM, MIN_ZOOM } from "../shared/zoom-steps";
 import { NumberField } from "./number-field";
 import { fitMode } from "./view-sync";
+import { t } from "@workshop/l10n";
 
 /** A native popover stays visible over the page and supports light dismissal. */
 export function ViewControls({
@@ -33,10 +34,10 @@ export function ViewControls({
         type="button"
         className="view-button"
         popoverTarget={id}
-        aria-label="View controls"
-        title="Choose zoom, page layout and scrolling"
+        aria-label={t("View controls")}
+        title={t("Choose zoom, page layout and scrolling")}
       >
-        <i className="codicon codicon-layout" aria-hidden="true" /> View
+        <i className="codicon codicon-layout" aria-hidden="true" /> {t("View")}
       </button>
       <div
         id={id}
@@ -44,7 +45,7 @@ export function ViewControls({
         ref={menu}
         className="view-menu"
         role="group"
-        aria-label="PDF view controls"
+        aria-label={t("PDF view controls")}
       >
         <ZoomControls menu={menu} act={act} run={run} />
         <LayoutControls choices={choices} act={act} />
@@ -64,22 +65,22 @@ function LayoutControls({
   return (
     <>
       <ChoiceSelect
-        label="Page layout"
-        name="Page layout"
+        label={t("Page layout")}
+        name={t("Page layout")}
         value={choices.pageLayout}
         options={PAGE_LAYOUTS}
         onChange={(pageLayout) => act({ action: "setPageLayout", pageLayout })}
       />
       <ChoiceSelect
-        label="Scrolling"
-        name="Scroll mode"
+        label={t("Scrolling")}
+        name={t("Scroll mode")}
         value={choices.scrollMode}
         options={SCROLL_MODES}
         onChange={(scrollMode) => act({ action: "setScrollMode", scrollMode })}
       />
       <ChoiceSelect
-        label="Direction"
-        name="Scroll direction"
+        label={t("Direction")}
+        name={t("Scroll direction")}
         value={choices.scrollDirection}
         options={SCROLL_DIRECTIONS}
         onChange={(scrollDirection) =>
@@ -105,9 +106,9 @@ function ZoomControls({
   return (
     <>
       <label>
-        Zoom mode
+        {t("Zoom mode")}
         <select
-          aria-label="Zoom mode"
+          aria-label={t("Zoom mode")}
           value={mode}
           onChange={(event) => {
             if (event.target.value === "custom") {
@@ -117,16 +118,16 @@ function ZoomControls({
             }
           }}
         >
-          <option value="fitWidth">Fit width</option>
-          <option value="fitPage">Fit page</option>
-          <option value="actualSize">Actual size (100%)</option>
-          <option value="custom">Custom percentage</option>
+          <option value="fitWidth">{t("Fit width")}</option>
+          <option value="fitPage">{t("Fit page")}</option>
+          <option value="actualSize">{t("Actual size (100%)")}</option>
+          <option value="custom">{t("Custom percentage")}</option>
         </select>
       </label>
       <label>
-        Percentage
+        {t("Percentage")}
         <NumberField
-          label="Custom zoom"
+          label={t("Custom zoom")}
           value={Math.round(zoomLevel * 100)}
           suffix="%"
           onCommit={(percent) => {

@@ -15,6 +15,7 @@ import {
 import { registerTextCompletions } from "../text-completions";
 import { onWillDelete } from "./deletions";
 import type { NativeDocuments } from "./native-documents";
+import { t } from "@workshop/l10n";
 
 /** VS Code's text documents, wrapped as `HostDocument`s by `documents`. */
 export function createHostDocuments(documents: NativeDocuments): HostDocuments {
@@ -359,7 +360,10 @@ function warnLinksNotUpdated(uris: readonly string[]): void {
     path.posix.basename(vscode.Uri.parse(uri).path),
   );
   void vscode.window.showWarningMessage(
-    `Links in ${names.join(", ")} were not updated. Check them after the rename.`,
+    t(
+      "Links in {0} were not updated. Check them after the rename.",
+      names.join(", "),
+    ),
   );
 }
 

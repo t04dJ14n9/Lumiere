@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   pageColorsLabel,
   parsePageColors,
@@ -43,94 +44,111 @@ type Item = {
  * Status bar entries, in their order from left to right (see
  * `STATUS_BAR_ORDER`): history, find, View, page colors, "Page 4 / 15", previous/next page, zoom
  * label and buttons. Optional buttons show only when
- * `toolbar.statusBarButtons` asks for them.
+ * `toolbar.statusBarButtons` asks for them. Made when the bar is, not when
+ * this module loads: their text is in the reader's language.
  */
-const ITEMS: Item[] = [
-  {
-    id: "historyBack",
-    name: "PDF History Back",
-    text: "$(arrow-left)",
-    tooltip: "Back to previous location",
-    command: HISTORY_COMMAND_IDS.historyBack,
-    button: true,
-  },
-  {
-    id: "historyForward",
-    name: "PDF History Forward",
-    text: "$(arrow-right)",
-    tooltip: "Forward to next location",
-    command: HISTORY_COMMAND_IDS.historyForward,
-    button: true,
-  },
-  {
-    id: "find",
-    name: "PDF Find",
-    text: "$(search)",
-    tooltip: `Find in PDF (${key("Ctrl+F", "⌘F")})`,
-    command: VIEW_COMMAND_IDS.find,
-    button: true,
-  },
-  {
-    id: "view",
-    name: "PDF View",
-    text: "$(layout) View",
-    tooltip: "Choose zoom, page layout and scrolling",
-    command: VIEW_CONTROL_COMMAND_IDS.selectView,
-  },
-  {
-    id: "pageColors",
-    name: "PDF Page Colors",
-    text: "",
-    tooltip: "Cycle page colors: Follow → Normal → Dark",
-    command: TOOLBAR_COMMAND_IDS.cyclePageColors,
-  },
-  {
-    id: "page",
-    name: "PDF Page",
-    text: "",
-    tooltip: `Go to Page… (${key("Ctrl+G", "⌃G")})`,
-    command: VIEW_COMMAND_IDS.goToPage,
-  },
-  {
-    id: "previousPage",
-    name: "PDF Previous Page",
-    text: "$(chevron-up)",
-    tooltip: `Previous Page (${key("Alt+PageUp", "⌥PageUp")})`,
-    command: VIEW_COMMAND_IDS.previousPage,
-    button: true,
-  },
-  {
-    id: "nextPage",
-    name: "PDF Next Page",
-    text: "$(chevron-down)",
-    tooltip: `Next Page (${key("Alt+PageDown", "⌥PageDown")})`,
-    command: VIEW_COMMAND_IDS.nextPage,
-    button: true,
-  },
-  {
-    id: "zoom",
-    name: "PDF Zoom",
-    text: "",
-    tooltip: "Pick a Zoom…",
-    command: VIEW_COMMAND_IDS.selectZoom,
-  },
-  {
-    id: "zoomOut",
-    name: "PDF Zoom Out",
-    text: "$(zoom-out)",
-    tooltip: `Zoom Out (${key("Ctrl+-", "⌘-")})`,
-    command: VIEW_COMMAND_IDS.zoomOut,
-    button: true,
-  },
-  {
-    id: "zoomIn",
-    name: "PDF Zoom In",
-    text: "$(zoom-in)",
-    tooltip: `Zoom In (${key("Ctrl+=", "⌘=")})`,
-    command: VIEW_COMMAND_IDS.zoomIn,
-    button: true,
-  },
-];
+function statusBarItems(): Item[] {
+  return [...historyAndFindItems(), ...pageItems(), ...zoomItems()];
+}
+
+function historyAndFindItems(): Item[] {
+  return [
+    {
+      id: "historyBack",
+      name: t("PDF History Back"),
+      text: "$(arrow-left)",
+      tooltip: t("Back to previous location"),
+      command: HISTORY_COMMAND_IDS.historyBack,
+      button: true,
+    },
+    {
+      id: "historyForward",
+      name: t("PDF History Forward"),
+      text: "$(arrow-right)",
+      tooltip: t("Forward to next location"),
+      command: HISTORY_COMMAND_IDS.historyForward,
+      button: true,
+    },
+    {
+      id: "find",
+      name: t("PDF Find"),
+      text: "$(search)",
+      tooltip: t("Find in PDF ({0})", key("Ctrl+F", "⌘F")),
+      command: VIEW_COMMAND_IDS.find,
+      button: true,
+    },
+  ];
+}
+
+function pageItems(): Item[] {
+  return [
+    {
+      id: "view",
+      name: t("PDF View"),
+      text: `$(layout) ${t("View")}`,
+      tooltip: t("Choose zoom, page layout and scrolling"),
+      command: VIEW_CONTROL_COMMAND_IDS.selectView,
+    },
+    {
+      id: "pageColors",
+      name: t("PDF Page Colors"),
+      text: "",
+      tooltip: t("Cycle page colors: Follow → Normal → Dark"),
+      command: TOOLBAR_COMMAND_IDS.cyclePageColors,
+    },
+    {
+      id: "page",
+      name: t("PDF Page"),
+      text: "",
+      tooltip: t("Go to Page… ({0})", key("Ctrl+G", "⌃G")),
+      command: VIEW_COMMAND_IDS.goToPage,
+    },
+    {
+      id: "previousPage",
+      name: t("PDF Previous Page"),
+      text: "$(chevron-up)",
+      tooltip: t("Previous Page ({0})", key("Alt+PageUp", "⌥PageUp")),
+      command: VIEW_COMMAND_IDS.previousPage,
+      button: true,
+    },
+    {
+      id: "nextPage",
+      name: t("PDF Next Page"),
+      text: "$(chevron-down)",
+      tooltip: t("Next Page ({0})", key("Alt+PageDown", "⌥PageDown")),
+      command: VIEW_COMMAND_IDS.nextPage,
+      button: true,
+    },
+  ];
+}
+
+function zoomItems(): Item[] {
+  return [
+    {
+      id: "zoom",
+      name: t("PDF Zoom"),
+      text: "",
+      tooltip: t("Pick a Zoom…"),
+      command: VIEW_COMMAND_IDS.selectZoom,
+    },
+    {
+      id: "zoomOut",
+      name: t("PDF Zoom Out"),
+      text: "$(zoom-out)",
+      tooltip: t("Zoom Out ({0})", key("Ctrl+-", "⌘-")),
+      command: VIEW_COMMAND_IDS.zoomOut,
+      button: true,
+    },
+    {
+      id: "zoomIn",
+      name: t("PDF Zoom In"),
+      text: "$(zoom-in)",
+      tooltip: t("Zoom In ({0})", key("Ctrl+=", "⌘=")),
+      command: VIEW_COMMAND_IDS.zoomIn,
+      button: true,
+    },
+  ];
+}
 
 function themeKind(): ThemeKind {
   return vscode.window.activeColorTheme.kind as ThemeKind;
@@ -148,7 +166,7 @@ function pageColorsText(setting: PageColorsSetting): string {
     return `$(color-mode) ${label}`;
   }
   const effective = resolveEffective(setting, themeKind());
-  return `$(color-mode) Follow (${pageColorsLabel(effective)})`;
+  return `$(color-mode) ${t("Follow ({0})", pageColorsLabel(effective))}`;
 }
 
 type EntryState = {
@@ -172,7 +190,10 @@ function refreshEntry(
       return;
     case "pageColors":
       entry.text = pageColorsText(colors);
-      entry.tooltip = `Page colors: ${pageColorsLabel(colors)} (click to cycle)`;
+      entry.tooltip = t(
+        "Page colors: {0} (click to cycle)",
+        pageColorsLabel(colors),
+      );
       return;
     case "previousPage":
       entry.command = view.canGoBack ? item.command : undefined;
@@ -193,10 +214,11 @@ function refreshEntry(
 
 export class StatusBar implements vscode.Disposable {
   private readonly items = new Map<string, vscode.StatusBarItem>();
+  private readonly definitions = statusBarItems();
   private readonly subscription: vscode.Disposable;
 
   constructor(private readonly panels: PdfPanels) {
-    for (const item of ITEMS) {
+    for (const item of this.definitions) {
       const entry = vscode.window.createStatusBarItem(
         `lumiere.pdf.${item.id}`,
         vscode.StatusBarAlignment.Right,
@@ -222,7 +244,7 @@ export class StatusBar implements vscode.Disposable {
     const buttons =
       shown && showStatusBarButtons(configuration.get("statusBarButtons"));
     const colors = pageColorsSetting();
-    for (const item of ITEMS) {
+    for (const item of this.definitions) {
       const entry = this.items.get(item.id)!;
       if (!shown || (item.button && !buttons)) {
         entry.hide();

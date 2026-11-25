@@ -9,6 +9,7 @@ import type { GraphNote, ResolvedTarget } from "./project";
 import type { GraphScope } from "./scope";
 import { drawGraph } from "./view";
 import type { DrawnNode } from "./view";
+import { t } from "@workshop/l10n";
 
 export type GraphSnapshot = Infer<(typeof protocol.notifications)["snapshot"]>;
 
@@ -31,9 +32,6 @@ export interface SnapshotRequest {
   maxEdges: number;
 }
 
-const EMPTY_REASON =
-  "No vault folder is open. Open a folder to draw its notes.";
-
 /** A panel with nowhere to draw. The generation still moves so a stale graph clears. */
 export function emptySnapshot(generation: number): GraphSnapshot {
   return {
@@ -49,7 +47,7 @@ export function emptySnapshot(generation: number): GraphSnapshot {
     accepted: true,
     nodeCount: 0,
     edgeCount: 0,
-    reason: EMPTY_REASON,
+    reason: t("No vault folder is open. Open a folder to draw its notes."),
     nodes: [],
     edges: [],
     legend: [],
@@ -163,7 +161,7 @@ function guardPayload(snapshot: GraphSnapshot): GraphSnapshot {
     nodes: [],
     edges: [],
     legend: [],
-    reason: "This graph is too large to draw. Narrow the filters.",
+    reason: t("This graph is too large to draw. Narrow the filters."),
   };
 }
 

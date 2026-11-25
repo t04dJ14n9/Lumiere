@@ -4,6 +4,7 @@ import type { EditorPanel, Editors } from "../editor/api";
 import { protocol as editorProtocol } from "../editor/protocol";
 import { OutlineJumpWindow } from "./jump-window";
 import type { OutlineSource } from "./tree";
+import { t } from "@workshop/l10n";
 
 const REFRESH_DELAY_MS = 300;
 
@@ -71,7 +72,7 @@ export class OutlineView {
     this.sourceVersion = document?.version ?? 0;
     this.options.source.set(document?.uri, document?.getText() ?? "");
     this.options.tree.setMessage(
-      this.options.source.isEmpty ? "No headings." : undefined,
+      this.options.source.isEmpty ? t("No headings.") : undefined,
     );
     this.options.source.parentsStartExpanded =
       this.options.expandMode() === "all";

@@ -22,6 +22,7 @@ import {
   mayCreateNote,
   openedVaultTarget,
 } from "./target";
+import { t } from "@workshop/l10n";
 export const linksHost: Plugin<{ panel: PanelShell }> = {
   name: "links",
   inject: {
@@ -241,7 +242,7 @@ async function openExternal(
   }
   if (
     !["http", "https", "mailto", navigation.scheme].includes(scheme) &&
-    !(await navigation.confirm(`Open ${scheme} application link?`))
+    !(await navigation.confirm(t("Open {0} application link?", scheme)))
   ) {
     return false;
   }

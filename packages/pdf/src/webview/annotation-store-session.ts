@@ -12,6 +12,7 @@ import {
 } from "./annotation-persist";
 import { showStoreFile } from "./annotation-store-sync";
 import type { OutgoingMessage } from "./outbox";
+import { t } from "@workshop/l10n";
 
 /**
  * Numbers the PDF writes of every session on this page, so a result for a
@@ -104,7 +105,11 @@ export class StoreSession {
         RESTORE_OP_ID,
       );
       if (restored.kind === "unreadable") {
-        this.leaveFileAlone("could not be read");
+        this.leaveFileAlone(
+          t(
+            "The annotation file kept for this PDF could not be read. It is left as it is, and annotations made now are not saved to it.",
+          ),
+        );
         return;
       }
       this.ownership.imported(
@@ -112,19 +117,25 @@ export class StoreSession {
       );
       if (restored.lost > 0) {
         this.error(
-          `${restored.lost} kept annotation(s) could not be restored; the next save leaves them out of the annotation file.`,
+          t(
+            "{0} kept annotation(s) could not be restored; the next save leaves them out of the annotation file.",
+            restored.lost,
+          ),
         );
       }
     } catch (error) {
-      this.leaveFileAlone(`could not be restored (${describe(error)})`);
+      this.leaveFileAlone(
+        t(
+          "The annotation file kept for this PDF could not be restored ({0}). It is left as it is, and annotations made now are not saved to it.",
+          describe(error),
+        ),
+      );
     }
   }
 
-  private leaveFileAlone(problem: string): void {
+  private leaveFileAlone(message: string): void {
     this.fileLeftAlone = true;
-    this.error(
-      `The annotation file kept for this PDF ${problem}. It is left as it is, and annotations made now are not saved to it.`,
-    );
+    this.error(message);
   }
 
   /** A change EmbedPDF has saved: Lumiere's go to the file, a PDF's own are reported. */
@@ -224,18 +235,26 @@ export class StoreSession {
           // Unacknowledged, and no later save: one would replace the file with
           // this viewer's annotations alone.
           this.leaveFileAlone(
-            "was saved by another editor in a form this viewer cannot show",
+            t(
+              "The annotation file kept for this PDF was saved by another editor in a form this viewer cannot show. It is left as it is, and annotations made now are not saved to it.",
+            ),
           );
           return;
         }
         if (lost > 0) {
           this.error(
-            `${lost} annotation(s) saved in another editor of this PDF could not be shown here.`,
+            t(
+              "{0} annotation(s) saved in another editor of this PDF could not be shown here.",
+              lost,
+            ),
           );
         }
       } catch (error) {
         this.error(
-          `Annotations saved in another editor of this PDF could not be shown here (${describe(error)}).`,
+          t(
+            "Annotations saved in another editor of this PDF could not be shown here ({0}).",
+            describe(error),
+          ),
         );
         return;
       }

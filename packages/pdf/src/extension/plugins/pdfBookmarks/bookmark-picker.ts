@@ -1,15 +1,26 @@
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import type { Bookmark } from "../../../shared/bookmarks";
 
 /** Item buttons, as VS Code's own Quick Picks have them (Open Recent's remove, for one). */
-const RENAME_BUTTON: vscode.QuickInputButton = {
-  iconPath: new vscode.ThemeIcon("edit"),
-  tooltip: "Rename Bookmark",
-};
-const DELETE_BUTTON: vscode.QuickInputButton = {
-  iconPath: new vscode.ThemeIcon("trash"),
-  tooltip: "Delete Bookmark",
-};
+interface ItemButtons {
+  rename: vscode.QuickInputButton;
+  delete: vscode.QuickInputButton;
+}
+
+/** One pair per picker: the buttons are told apart by identity, and carry text in the reader's language. */
+function itemButtons(): ItemButtons {
+  return {
+    rename: {
+      iconPath: new vscode.ThemeIcon("edit"),
+      tooltip: t("Rename Bookmark"),
+    },
+    delete: {
+      iconPath: new vscode.ThemeIcon("trash"),
+      tooltip: t("Delete Bookmark"),
+    },
+  };
+}
 
 export interface BookmarkPickItem extends vscode.QuickPickItem {
   bookmark: Bookmark;
@@ -22,10 +33,11 @@ export interface BookmarkPickItem extends vscode.QuickPickItem {
 export function bookmarkPickItems(
   bookmarks: readonly Bookmark[],
   sectionOf: (bookmark: Bookmark) => string | undefined,
+  buttons: ItemButtons,
 ): BookmarkPickItem[] {
   return bookmarks.map((bookmark) => {
     const section = sectionOf(bookmark)?.trim();
-    const page = `Page ${bookmark.page}`;
+    const page = t("Page {0}", bookmark.page);
     return {
       // `$(name)` in a label or a description is an icon: a title, and the
       // outline's section name, are text.
@@ -34,7 +46,7 @@ export function bookmarkPickItems(
         section && section !== bookmark.title
           ? `${page} · ${asText(section)}`
           : page,
-      buttons: [RENAME_BUTTON, DELETE_BUTTON],
+      buttons: [buttons.rename, buttons.delete],
       bookmark,
     };
   });
@@ -74,7 +86,8 @@ export function pickBookmark(
   source: BookmarkPickerSource,
 ): Promise<BookmarkChoice | undefined> {
   const picker = vscode.window.createQuickPick<BookmarkPickItem>();
-  picker.title = "Go to Bookmark";
+  picker.title = t("Go to Bookmark");
+  const buttons = itemButtons();
   picker.matchOnDescription = true;
   picker.busy = true;
   return new Promise((resolve) => {
@@ -91,7 +104,7 @@ export function pickBookmark(
         return;
       }
       const mine = ++generation;
-      const shown = await showBookmarks(picker, source);
+      const shown = await showBookmarks(picker, source, buttons);
       if (open && mine === generation) {
         shown();
       }
@@ -102,9 +115,9 @@ export function pickBookmark(
         finish(item && { action: "go", bookmark: item.bookmark });
       }),
       picker.onDidTriggerItemButton(({ item, button }) => {
-        if (button === RENAME_BUTTON) {
+        if (button === buttons.rename) {
           finish({ action: "rename", bookmark: item.bookmark });
-        } else if (button === DELETE_BUTTON) {
+        } else if (button === buttons.delete) {
           void source.remove(item.bookmark);
         }
       }),
@@ -125,23 +138,26 @@ export function pickBookmark(
 async function showBookmarks(
   picker: vscode.QuickPick<BookmarkPickItem>,
   source: BookmarkPickerSource,
+  buttons: ItemButtons,
 ): Promise<() => void> {
   try {
     const bookmarks = await source.load();
     return () => {
-      picker.items = bookmarkPickItems(bookmarks, (bookmark) =>
-        source.sectionOf(bookmark),
+      picker.items = bookmarkPickItems(
+        bookmarks,
+        (bookmark) => source.sectionOf(bookmark),
+        buttons,
       );
       picker.placeholder = bookmarks.length
-        ? "Select a bookmark"
-        : "No bookmarks in this PDF yet.";
+        ? t("Select a bookmark")
+        : t("No bookmarks in this PDF yet.");
       picker.busy = false;
     };
   } catch (error) {
     const why = error instanceof Error ? error.message : String(error);
     return () => {
       picker.items = [];
-      picker.placeholder = `Could not read the bookmarks. ${why}`;
+      picker.placeholder = t("Could not read the bookmarks. {0}", why);
       picker.busy = false;
     };
   }

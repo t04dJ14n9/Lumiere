@@ -3,9 +3,11 @@
 ## Unreleased
 
 - Lumiere follows VS Code's display language. Simplified Chinese (zh-cn)
-  is the first translation: every command, setting description and view
-  name, and the PDF viewer's side panel; the rest of Lumiere's text
-  follows.
+  is the first translation, of all of Lumiere's own text: commands, settings
+  and views, the Markdown editor (menus, properties, tables, embeds, find,
+  outline, backlinks, search, graph, Git views) and the PDF viewer (toolbar,
+  side panel, notes, prompts and messages). Text written into notes and
+  what agents read stay English.
 - Copy Link for Agent names a note outside the workspace by its plain path
   even when the path has spaces, `@/notes/AI 活动/a.md#20-24`, instead of a
   percent-encoded `file:///` URI.

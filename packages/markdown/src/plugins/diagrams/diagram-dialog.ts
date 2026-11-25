@@ -1,5 +1,6 @@
 import { cloneDiagramSvg } from "./clone-svg";
 import { wheelZoomFactor } from "./wheel-zoom";
+import { t } from "@workshop/l10n";
 
 interface Point {
   x: number;
@@ -43,9 +44,9 @@ export function bindDiagramInspector(
   const inspect = doc.createElement("button");
   inspect.type = "button";
   inspect.className = "inspect-diagram";
-  inspect.textContent = "Inspect";
-  inspect.setAttribute("aria-label", "Inspect diagram");
-  inspect.setAttribute("title", "View in larger window");
+  inspect.textContent = t("Inspect");
+  inspect.setAttribute("aria-label", t("Inspect diagram"));
+  inspect.setAttribute("title", t("View in larger window"));
   // Place Inspect with Copy and Edit on the shell, not in the scrolling fence.
   const chrome = host.closest(".hybrid-block") ?? host;
   chrome.append(inspect);
@@ -158,7 +159,7 @@ class DiagramInspector {
     this.clone.style.width = `${Math.round(this.size.width * active)}px`;
     this.clone.style.height = `${Math.round(this.size.height * active)}px`;
     this.controls.toggle.textContent =
-      this.scale === null ? "Actual size" : "Fit diagram";
+      this.scale === null ? t("Actual size") : t("Fit diagram");
     this.controls.toggle.setAttribute(
       "aria-pressed",
       String(this.scale !== null),
@@ -336,12 +337,12 @@ function createDialogParts(
 ) {
   const dialog = document.createElement("dialog");
   dialog.className = "image-inspector diagram-inspector";
-  dialog.setAttribute("aria-label", "Mermaid diagram");
+  dialog.setAttribute("aria-label", t("Mermaid diagram"));
   const toolbar = document.createElement("nav");
-  toolbar.setAttribute("aria-label", "Diagram controls");
+  toolbar.setAttribute("aria-label", t("Diagram controls"));
   const area = document.createElement("section");
   area.className = "media-area";
-  area.setAttribute("aria-label", "Mermaid diagram");
+  area.setAttribute("aria-label", t("Mermaid diagram"));
   area.tabIndex = 0;
   // Mermaid theme CSS is scoped to `#svgId …`; stripping the id makes fills
   // compute to black in the lightbox. Assign a unique id and rewrite styles.
@@ -350,7 +351,7 @@ function createDialogParts(
   area.append(clone);
   const status = document.createElement("p");
   status.setAttribute("role", "status");
-  status.setAttribute("aria-label", "Diagram status");
+  status.setAttribute("aria-label", t("Diagram status"));
   status.textContent = `${Math.round(size.width)} × ${Math.round(size.height)}`;
   dialog.append(toolbar, area, status);
   return { dialog, toolbar, area, clone, status };
@@ -371,15 +372,15 @@ function createDiagramToolbar(options: {
     options.toolbar.append(node);
     return node;
   };
-  const toggle = button("Actual size", options.toggle);
+  const toggle = button(t("Actual size"), options.toggle);
   const minus = button("−", () => options.zoom(1 / 1.25));
-  minus.setAttribute("aria-label", "Zoom out");
+  minus.setAttribute("aria-label", t("Zoom out"));
   const percent = document.createElement("output");
-  percent.setAttribute("aria-label", "Diagram zoom");
+  percent.setAttribute("aria-label", t("Diagram zoom"));
   options.toolbar.append(percent);
   const plus = button("+", () => options.zoom(1.25));
-  plus.setAttribute("aria-label", "Zoom in");
-  const dismiss = button("Close", options.close);
-  dismiss.setAttribute("aria-label", "Close diagram");
+  plus.setAttribute("aria-label", t("Zoom in"));
+  const dismiss = button(t("Close"), options.close);
+  dismiss.setAttribute("aria-label", t("Close diagram"));
   return { toggle, minus, percent, plus, dismiss };
 }

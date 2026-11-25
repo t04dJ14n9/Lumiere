@@ -1,4 +1,6 @@
 import { headerParts } from "./header-parts";
+import { escape } from "../html/helpers";
+import { t } from "@workshop/l10n";
 
 /**
  * Sheet chrome / row floors mirrored from `properties/estimated-height`
@@ -24,10 +26,13 @@ const COLLAPSED = SHEET_PADDING + HEADING;
  */
 export const FRONTMATTER_PLACEHOLDER_CLASS =
   "hybrid-properties mw-frontmatter-placeholder";
-export const FRONTMATTER_PLACEHOLDER_MARKUP =
-  '<div class="properties metadata-container is-collapsed">' +
-  '<div class="metadata-properties-heading" data-properties-heading>' +
-  '<span class="metadata-properties-title">Properties</span></div></div>';
+export function frontmatterPlaceholderMarkup(): string {
+  return (
+    '<div class="properties metadata-container is-collapsed">' +
+    '<div class="metadata-properties-heading" data-properties-heading>' +
+    `<span class="metadata-properties-title">${escape(t("Properties"))}</span></div></div>`
+  );
+}
 
 /** Bound fence probes so match never slices a multi-MB note. */
 export const FRONTMATTER_PROBE_MAX = 64 * 1024;

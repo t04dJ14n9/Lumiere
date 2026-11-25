@@ -1,5 +1,6 @@
 import type { EditorState, Text } from "@codemirror/state";
 import type { SearchQuery } from "@codemirror/search";
+import { t } from "@workshop/l10n";
 
 /** Counting stops here so a one-letter query in a huge note stays cheap. */
 export const countLimit = 1000;
@@ -91,8 +92,10 @@ export function countLabel(query: SearchQuery, count: MatchCount): string {
     return "";
   }
   if (count.total === 0) {
-    return "No results";
+    return t("No results");
   }
   const total = count.capped ? `${countLimit}+` : String(count.total);
-  return count.current ? `${count.current} / ${total}` : `${total} results`;
+  return count.current
+    ? `${count.current} / ${total}`
+    : t("{0} results", total);
 }

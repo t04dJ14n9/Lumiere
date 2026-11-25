@@ -10,6 +10,7 @@ import {
   writeSetting,
   type Editing,
 } from "./edit";
+import { t } from "@workshop/l10n";
 
 /**
  * **Lumiere: Open Settings**, **Change Setting…** and the commands
@@ -58,7 +59,7 @@ function required(
 ): ContributedSetting | undefined {
   const setting = ownSetting(editing, `${PREFIX}${key}`);
   if (!setting) {
-    editing.error(`The setting ${PREFIX}${key} is not available.`);
+    editing.error(t("The setting {0} is not available.", `${PREFIX}${key}`));
   }
   return setting;
 }
@@ -75,7 +76,7 @@ async function flip(editing: Editing, toggle: SettingToggle): Promise<void> {
     editing,
     setting,
     next,
-    `${toggle.label}: ${next ? "on" : "off"}`,
+    next ? t("{0}: on", toggle.label()) : t("{0}: off", toggle.label()),
   );
 }
 
@@ -88,11 +89,11 @@ async function changeSetting(
   if (argument === undefined) {
     const all = editing.settings.contributed();
     if (all.length === 0) {
-      editing.error("The Lumiere settings are not available.");
+      editing.error(t("The Lumiere settings are not available."));
       return;
     }
     const picked = await editing.dialogs.pick({
-      placeholder: "Change a Lumiere setting…",
+      placeholder: t("Change a Lumiere setting…"),
       items: (query) =>
         settingRows(
           all,
@@ -105,7 +106,7 @@ async function changeSetting(
     // A key from a keybinding or another extension: only ours is accepted.
     chosen = ownSetting(editing, argument);
     if (!chosen) {
-      editing.error("That is not a Lumiere setting.");
+      editing.error(t("That is not a Lumiere setting."));
       return;
     }
   }
@@ -148,14 +149,14 @@ async function setFontSize(editing: Editing, argument: unknown): Promise<void> {
       editing,
       setting,
       typeof current.value === "number" ? current.value : dflt,
-      `Note font size in pixels (Obsidian's default is ${String(dflt)})`,
+      t("Note font size in pixels (Obsidian's default is {0})", String(dflt)),
     );
     if (typed === undefined) {
       return;
     }
     size = Number(typed.trim());
   } else if (validateValue(setting.schema, argument)) {
-    editing.error("That is not a valid note font size.");
+    editing.error(t("That is not a valid note font size."));
     return;
   }
   await writeSetting(editing, setting, size);

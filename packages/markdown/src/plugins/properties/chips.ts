@@ -7,6 +7,7 @@ import {
   setInputValidity,
   reportInputValidity,
 } from "./value-input";
+import { t } from "@workshop/l10n";
 export { itemOccurrence } from "./chip-values";
 
 export interface PropertyChipsOptions {
@@ -132,16 +133,16 @@ class PropertyChips {
       list,
       [
         {
-          label: "Edit item",
+          label: t("Edit item"),
           disabled: !actions.editable,
           run: () => this.edit(index),
         },
         {
-          label: "Copy item",
+          label: t("Copy item"),
           run: () => actions.copy(String(original[index] ?? "")),
         },
         {
-          label: "Remove from list",
+          label: t("Remove from list"),
           disabled: !actions.editable,
           run: () => actions.remove(index),
         },
@@ -151,7 +152,7 @@ class PropertyChips {
         setInputValidity(this.add, message);
         reportInputValidity(this.add);
       },
-      "List item actions",
+      t("List item actions"),
     );
   }
 

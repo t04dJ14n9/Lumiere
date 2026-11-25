@@ -2,6 +2,7 @@ import { fuzzyMatch } from "../../shared/fuzzy";
 import type { PickItem } from "../../shared/host";
 import { folderOf, nameOf, stemOf } from "../../shared/vault-path";
 import type { VaultFile, VaultIndex } from "../vault/api";
+import { t } from "@workshop/l10n";
 
 export type SwitcherTarget =
   | { kind: "note"; file: VaultFile }
@@ -157,7 +158,7 @@ function unresolvedCandidates(index: VaultIndex): Candidate[] {
   return [...seen.values()].map((linkpath) => ({
     item: {
       label: linkpath,
-      description: "Not created yet",
+      description: t("Not created yet"),
       value: { kind: "unresolved", linkpath },
     },
     texts: [linkpath],
@@ -217,8 +218,8 @@ function hasNoteNamed(index: VaultIndex, name: string): boolean {
 
 function createItem(name: string): PickItem<SwitcherTarget> {
   return {
-    label: `$(new-file) Create “${name}”`,
-    description: "New note",
+    label: t("$(new-file) Create “{0}”", name),
+    description: t("New note"),
     value: { kind: "create", name },
   };
 }

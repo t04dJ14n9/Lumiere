@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import * as vscode from "vscode";
+import { t } from "@workshop/l10n";
 import {
   extractPdfLink,
   parseLocationFragment,
@@ -124,7 +125,7 @@ async function openLocation(
   }
   if (resolved.status !== "found") {
     void vscode.window.showWarningMessage(
-      `No readable PDF file found at ${String(link)}`,
+      t("No readable PDF file found at {0}", String(link)),
     );
     return false;
   }
@@ -132,7 +133,9 @@ async function openLocation(
   const arrival = arrivalOf(uri.fragment, location);
   if (arrival === "invalid") {
     void vscode.window.showWarningMessage(
-      "The PDF location is invalid. Use a positive whole page number, optionally with a valid viewrect.",
+      t(
+        "The PDF location is invalid. Use a positive whole page number, optionally with a valid viewrect.",
+      ),
     );
     return false;
   }
@@ -159,9 +162,10 @@ function askForLink(
 ): Thenable<string | undefined> {
   return vscode.window.showInputBox(
     {
-      title: "Open PDF at Location",
-      prompt:
+      title: t("Open PDF at Location"),
+      prompt: t(
         "A PDF path or link, optionally with #page=… and &viewrect=…, or a Source line copied for an agent",
+      ),
       placeHolder: "papers/paper.pdf#page=3&viewrect=72,83,134,21",
     },
     token,
@@ -325,9 +329,10 @@ async function pickPdf(
       uri,
     })),
     {
-      title: "Choose the PDF to open",
-      placeHolder:
+      title: t("Choose the PDF to open"),
+      placeHolder: t(
         "This relative path exists in more than one workspace folder",
+      ),
     },
     request.token,
   );

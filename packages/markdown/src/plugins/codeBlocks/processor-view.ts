@@ -4,6 +4,7 @@ import type {} from "../editor/api";
 import { CancelToken } from "../../shared/rpc/lifecycle";
 import { protocol } from "./protocol";
 import { ProcessorClient } from "./processor-client";
+import { t } from "@workshop/l10n";
 /**
  * Code processors (other extensions) render fences of the languages they
  * accept. `blocks` registers the Live Preview widgets for those languages; it
@@ -71,11 +72,11 @@ function processFence(
   const uri = pass.documentUri ?? ctx.editor.source;
   const key = `processor:${fence.language}:${fence.source}`;
   if (pass.ancestry.includes(key) || pass.ancestry.length >= 8) {
-    container.textContent = "Code processor recursion limit";
+    container.textContent = t("Code processor recursion limit");
     return () => token.cancel();
   }
   let rendered: RenderPass | undefined;
-  container.textContent = "Rendering…";
+  container.textContent = t("Rendering…");
   void client
     .render(
       {
@@ -108,7 +109,7 @@ function processFence(
     })
     .catch((error) => {
       if (!token.cancelled) {
-        container.textContent = `Code rendering failed: ${String(error)}`;
+        container.textContent = t("Code rendering failed: {0}", String(error));
         pass.measure();
       }
     });

@@ -1,4 +1,5 @@
 /** The extension's id in the Settings UI search (`@ext:`). */
+import { t } from "@workshop/l10n";
 
 /**
  * A command that flips one boolean setting. `key` is the same key the
@@ -10,44 +11,45 @@
 export interface SettingToggle {
   readonly command: string;
   readonly key: string;
-  readonly label: string;
+  /** A function: the label is translated when shown, not when the module loads. */
+  readonly label: () => string;
 }
 
 export const toggles: readonly SettingToggle[] = [
   {
     command: "toggleLineNumbers",
     key: "plugins.lineNumbers.enabled",
-    label: "Line numbers",
+    label: () => t("Line numbers"),
   },
   {
     command: "toggleReadableLineWidth",
     key: "editor.readableLineLength",
-    label: "Readable line width",
+    label: () => t("Readable line width"),
   },
   {
     command: "toggleMermaid",
     key: "plugins.diagrams.enabled",
-    label: "Mermaid diagrams",
+    label: () => t("Mermaid diagrams"),
   },
   {
     command: "toggleInlineTitle",
     key: "plugins.inlineTitle.enabled",
-    label: "Inline title",
+    label: () => t("Inline title"),
   },
   {
     command: "toggleInlineGitChanges",
     key: "plugins.gitInline.enabled",
-    label: "Inline git changes",
+    label: () => t("Inline git changes"),
   },
   {
     command: "toggleVim",
     key: "plugins.vim.enabled",
-    label: "Vim mode",
+    label: () => t("Vim mode"),
   },
   {
     command: "toggleSpellcheck",
     key: "plugins.spellcheck.enabled",
-    label: "Spellcheck",
+    label: () => t("Spellcheck"),
   },
 ];
 

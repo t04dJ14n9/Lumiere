@@ -2,12 +2,13 @@ import { noteFragment } from "../../markdown/metadata/fragments";
 import { attr, escape } from "../../markdown/html/helpers";
 import type { RenderPass, RenderService } from "../render/api";
 import type { Resource } from "../resources/api";
+import { t } from "@workshop/l10n";
 
 export function notePreview(text: string, href: string, source: string) {
   const fragment = href.split("#").slice(1).join("#");
   const selection = noteFragment(text, fragment);
   if (!selection) {
-    throw new Error("Section not found.");
+    throw new Error(t("Section not found."));
   }
   return {
     text: previewPrefix(selection.text),
@@ -89,6 +90,9 @@ export async function renderPreview(options: {
     );
   }
   body.classList.add("mod-empty");
-  body.textContent = `${resource.kind.toUpperCase()} attachment — use Open to view it.`;
+  body.textContent = t(
+    "{0} attachment — use Open to view it.",
+    resource.kind.toUpperCase(),
+  );
   return undefined;
 }
