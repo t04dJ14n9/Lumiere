@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.33 (2026-11-25)
 
 - Markdown: a table fits the note's width and its cells wrap, instead of
   each cell running on one line. Short columns keep their full width; a
