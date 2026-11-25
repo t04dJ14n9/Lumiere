@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- PDF agent bridge on Windows: when a folder is added to or removed from the
+  window while an agent is reading the bridge's discovery file, the update
+  is retried instead of lost, so the agent still finds this window.
+
 ## 0.1.35 (2026-11-25)
 
 - Lumiere installs on VS Code 1.101 and later (it required 1.128), so
