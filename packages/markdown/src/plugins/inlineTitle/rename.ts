@@ -5,6 +5,7 @@ import { renameTarget } from "./title";
 import { TitleTransfers } from "./transfers";
 import type { TitleFocus } from "./protocol";
 import { MARKDOWN_EDITOR } from "../../shared/editor-provider";
+import { t } from "@workshop/l10n";
 
 interface RenameOptions {
   panel: EditorPanel;
@@ -31,7 +32,7 @@ export class TitleRenames {
     token,
   }: RenameOptions): Promise<string> {
     if (panel.document.isUntitled || !this.host.hostDocuments.rename) {
-      throw new Error("Save the note before renaming it.");
+      throw new Error(t("Save the note before renaming it."));
     }
     const target = renameTarget(panel.document.uri, title);
     if (target === panel.document.uri) {
@@ -40,7 +41,7 @@ export class TitleRenames {
     await panel.session.flush(panel.id);
     const views = await this.captureViews(panel, focus);
     if (token.cancelled) {
-      throw new Error("Rename cancelled.");
+      throw new Error(t("Rename cancelled."));
     }
     for (const view of views) {
       const { column } = view.panel;
@@ -89,7 +90,7 @@ export class TitleRenames {
       views.some((view) => view.snapshot.documentVersion !== version)
     ) {
       throw new Error(
-        "The note changed while preparing its rename. Try again.",
+        t("The note changed while preparing its rename. Try again."),
       );
     }
     return views;

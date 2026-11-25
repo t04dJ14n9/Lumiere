@@ -13,6 +13,7 @@ import {
 } from "./jump-history";
 import { protocol } from "./jump-protocol";
 import type { Dialogs, HostCommands } from "../../shared/host";
+import { t } from "@workshop/l10n";
 
 interface PaneHistory {
   history: JumpHistory;
@@ -136,7 +137,7 @@ class PaneHistories {
       await replay(pane, direction, live, token);
     } catch (error) {
       if (!token.cancelled) {
-        this.dialogs.error(`Note navigation failed: ${String(error)}`);
+        this.dialogs.error(t("Note navigation failed: {0}", String(error)));
       }
     } finally {
       pane.busy = false;

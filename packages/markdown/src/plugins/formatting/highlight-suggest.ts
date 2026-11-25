@@ -10,23 +10,35 @@ import type {
   LocalSuggestions,
   SuggestionContext,
 } from "../suggest/api";
+import { t } from "@workshop/l10n";
 
 const MATH = new Set(["InlineMath", "BlockMath", "MathBlock"]);
 
-const options: readonly LocalSuggestion[] = [
-  {
-    label: "Default",
-    apply: (state, range) => highlightColourEdit(state, range.to, ""),
-    swatch: "default",
-  },
-  ...(
-    Object.entries(HIGHLIGHT_COLOURS) as [HighlightColour, string][]
-  ).map<LocalSuggestion>(([colour, emoji]) => ({
-    label: colour[0]!.toUpperCase() + colour.slice(1),
-    apply: (state, range) => highlightColourEdit(state, range.to, emoji),
-    swatch: colour,
-  })),
-];
+/** The colour menu, labelled when it opens, not when the module loads. */
+function colourOptions(): readonly LocalSuggestion[] {
+  const labels: Record<HighlightColour, string> = {
+    red: t("Red"),
+    orange: t("Orange"),
+    yellow: t("Yellow"),
+    green: t("Green"),
+    blue: t("Blue"),
+    purple: t("Purple"),
+  };
+  return [
+    {
+      label: t("Default"),
+      apply: (state, range) => highlightColourEdit(state, range.to, ""),
+      swatch: "default",
+    },
+    ...(
+      Object.entries(HIGHLIGHT_COLOURS) as [HighlightColour, string][]
+    ).map<LocalSuggestion>(([colour, emoji]) => ({
+      label: labels[colour],
+      apply: (state, range) => highlightColourEdit(state, range.to, emoji),
+      swatch: colour,
+    })),
+  ];
+}
 
 /**
  * The colours Obsidian 1.14 offers once `==` opening a highlight is typed
@@ -54,7 +66,7 @@ export function highlightColourSuggestion({
       return undefined;
     }
   }
-  return { at: pos, options };
+  return { at: pos, options: colourOptions() };
 }
 
 function highlightColourEdit(

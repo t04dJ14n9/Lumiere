@@ -32,6 +32,7 @@ import { cellPointerOffset } from "./cell-pointer";
 import { matchesEditableTable } from "./renderer-match";
 import { reportingFailures } from "./menu";
 import { cellsFollowNoteReadOnly } from "./cell-read-only";
+import { t } from "@workshop/l10n";
 export const tablesWebview: Plugin = {
   name: "tables",
   inject: {
@@ -99,7 +100,7 @@ function createEnvironment(ctx: Context): TableEnvironment {
       const tableItems = reportingFailures(items, report);
       void ctx.pipeline("editor/selectionMenu", tableItems).then((items) => {
         if (live) {
-          stop = menu.open(owner, items, point, "Table actions");
+          stop = menu.open(owner, items, point, t("Table actions"));
         }
       });
       return () => {

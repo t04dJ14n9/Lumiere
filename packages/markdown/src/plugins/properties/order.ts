@@ -2,6 +2,7 @@ import type { PropertyContext } from "./context";
 import { EdgeScroll, type PointerPoint } from "../../webview/ui/edge-scroll";
 import { placePropertyRows, propertyRows } from "./rows";
 import type { MenuItem } from "../editor/api";
+import { t } from "@workshop/l10n";
 
 interface OrderActions {
   commit(keys: string[]): boolean;
@@ -74,7 +75,7 @@ export class PropertyOrder {
         }),
         point,
         (message) => this.actions.report(message),
-        "Properties",
+        t("Properties"),
       );
     };
     heading.addEventListener(
@@ -341,14 +342,14 @@ export function propertyHeadingMenu(actions: {
   clear(): void;
 }): MenuItem[] {
   return [
-    { label: "Add file property", run: () => actions.add() },
+    { label: t("Add file property"), run: () => actions.add() },
     {
-      label: "Sort",
+      label: t("Sort"),
       children: [
-        { label: "Name (A to Z)", run: () => actions.sort(false) },
-        { label: "Name (Z to A)", run: () => actions.sort(true) },
+        { label: t("Name (A to Z)"), run: () => actions.sort(false) },
+        { label: t("Name (Z to A)"), run: () => actions.sort(true) },
       ],
     },
-    { label: "Clear file properties", run: () => actions.clear() },
+    { label: t("Clear file properties"), run: () => actions.clear() },
   ];
 }

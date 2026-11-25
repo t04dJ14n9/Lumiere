@@ -1,4 +1,5 @@
 import { record } from "../../shared/guards";
+import { t } from "@workshop/l10n";
 
 interface ImageOptions {
   dialog: HTMLDialogElement;
@@ -70,7 +71,8 @@ class ImageControls {
       this.scale === null ? "" : `${image.naturalWidth * this.scale}px`;
     image.style.height =
       this.scale === null ? "" : `${image.naturalHeight * this.scale}px`;
-    toggle.textContent = this.scale === null ? "Actual size" : "Fit image";
+    toggle.textContent =
+      this.scale === null ? t("Actual size") : t("Fit image");
     toggle.setAttribute("aria-pressed", String(this.scale !== null));
     percent.textContent = `${Math.round(100 * (this.scale ?? this.fitScale()))}%`;
     minus.disabled = (this.scale ?? this.fitScale()) <= this.minimum();
@@ -244,13 +246,13 @@ function zoomToolbar({
     toolbar.append(node);
     return node;
   };
-  const toggle = button("Actual size", toggleScale);
+  const toggle = button(t("Actual size"), toggleScale);
   const minus = button("−", () => zoom(1 / 1.25));
-  minus.setAttribute("aria-label", "Zoom out");
+  minus.setAttribute("aria-label", t("Zoom out"));
   const percent = document.createElement("output");
-  percent.setAttribute("aria-label", "Image zoom");
+  percent.setAttribute("aria-label", t("Image zoom"));
   toolbar.append(percent);
   const plus = button("+", () => zoom(1.25));
-  plus.setAttribute("aria-label", "Zoom in");
+  plus.setAttribute("aria-label", t("Zoom in"));
   return { toggle, minus, percent, plus };
 }

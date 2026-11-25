@@ -21,6 +21,7 @@ import { createPropertyRenderers } from "./renderers";
 import { registerPropertyFolding } from "./folding";
 import type {} from "./renderers";
 import type { PropertyKind } from "../../markdown/properties/types";
+import { t } from "@workshop/l10n";
 
 const configurations = new WeakMap<
   Context,
@@ -376,7 +377,7 @@ function registerDraftFlush(ctx: Context): void {
           )
         ) {
           throw new Error(
-            "Finish or cancel the invalid property draft before saving.",
+            t("Finish or cancel the invalid property draft before saving."),
           );
         }
       }

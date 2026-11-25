@@ -24,6 +24,7 @@ import {
   type OpenBaseTarget,
   type RenderEnv,
 } from "./base-embed-views";
+import { t } from "@workshop/l10n";
 
 export type { OpenBaseTarget };
 
@@ -58,14 +59,14 @@ export function renderBaseEmbed(
     definition = parseBaseYaml(ctx.resource.text ?? "");
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "Failed to parse .base file";
-    renderBaseError(embed, `Invalid base syntax: ${message}`, ctx);
+      error instanceof Error ? error.message : t("Failed to parse .base file");
+    renderBaseError(embed, t("Invalid base syntax: {0}", message), ctx);
     return;
   }
   const { subpath } = splitTargetSubpath(ctx.target);
   const initialView = selectBaseView(definition, subpath);
   if (!initialView) {
-    renderBaseError(embed, `Unknown view "${subpath ?? ""}"`, ctx);
+    renderBaseError(embed, t('Unknown view "{0}"', subpath ?? ""), ctx);
     return;
   }
   mountInteractiveBase(embed, definition, initialView, ctx);
@@ -154,6 +155,14 @@ function toggleSortRule(
   return [];
 }
 
+/** How many rows a view shows, of how many its filters match. */
+function resultsLabel(count: number, totalMatches: number): string {
+  if (count !== totalMatches) {
+    return t("{0} of {1} results", count, totalMatches);
+  }
+  return count === 1 ? t("{0} result", count) : t("{0} results", count);
+}
+
 function buildBaseHeader(
   doc: Document,
   definition: BaseDefinition,
@@ -191,10 +200,7 @@ function buildBaseHeader(
   const resultsMenu = doc.createElement("div");
   resultsMenu.className = "bases-toolbar-item bases-toolbar-results-menu";
   const count = evaluated.rows.length;
-  resultsMenu.textContent =
-    count === evaluated.totalMatches
-      ? `${count} ${count === 1 ? "result" : "results"}`
-      : `${count} of ${evaluated.totalMatches} results`;
+  resultsMenu.textContent = resultsLabel(count, evaluated.totalMatches);
 
   toolbar.append(viewsMenu, resultsMenu);
   header.append(toolbar);
@@ -214,7 +220,7 @@ function buildBaseViewBody(
   if (evaluated.rows.length === 0) {
     const empty = env.doc.createElement("div");
     empty.className = "bases-empty";
-    empty.textContent = "No results";
+    empty.textContent = t("No results");
     viewEl.append(empty);
     return viewEl;
   }
@@ -393,7 +399,7 @@ function createOpenBaseButton(
   const link = doc.createElement("button");
   link.type = "button";
   link.className = "open-embed markdown-embed-link";
-  link.setAttribute("aria-label", `Open ${fileTarget}`);
+  link.setAttribute("aria-label", t("Open {0}", fileTarget));
   link.textContent = "↗";
   wireInteractiveClick(link, () => ctx.open(fileTarget, ctx.wiki));
   return link;

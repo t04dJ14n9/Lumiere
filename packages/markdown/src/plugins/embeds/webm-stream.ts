@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 interface ElementHeader {
   id: number;
   start: number;
@@ -98,12 +100,12 @@ export function webmMime(bytes: Uint8Array): string | undefined {
       bytes.subarray(codec.body, codec.end),
     );
     if (!known[name]) {
-      throw new Error(`Unsupported WebM track: ${name}`);
+      throw new Error(t("Unsupported WebM track: {0}", name));
     }
     codecs.push(known[name]);
   }
   if (!codecs.length) {
-    throw new Error("WebM has no supported media tracks.");
+    throw new Error(t("WebM has no supported media tracks."));
   }
   return `video/webm; codecs="${codecs.join(",")}"`;
 }
@@ -139,7 +141,7 @@ export class WebmStream {
         }
       }
       if (!Number.isFinite(item.end)) {
-        throw new Error("Invalid unknown-size WebM element.");
+        throw new Error(t("Invalid unknown-size WebM element."));
       }
       if (item.end > joined.length) {
         break;
@@ -158,7 +160,7 @@ export class WebmStream {
   finish(): Uint8Array[] {
     const output = this.push(new Uint8Array(0), true);
     if (this.pending.length) {
-      throw new Error("Truncated WebM element.");
+      throw new Error(t("Truncated WebM element."));
     }
     return output;
   }
@@ -184,7 +186,7 @@ function completeClusterBoundary(
       break;
     }
     if (!Number.isFinite(child.end)) {
-      throw new Error("Invalid unknown-size WebM child.");
+      throw new Error(t("Invalid unknown-size WebM child."));
     }
     if (child.end > joined.length) {
       break;
@@ -227,11 +229,11 @@ function blockTime(joined: Uint8Array, block: ElementHeader): number {
         )
       : block;
   if (!data) {
-    throw new Error("Invalid WebM block group.");
+    throw new Error(t("Invalid WebM block group."));
   }
   const track = vint(joined, data.body);
   if (!track || data.body + track[1] + 2 > data.end) {
-    throw new Error("Invalid WebM block.");
+    throw new Error(t("Invalid WebM block."));
   }
   const offset = data.body + track[1];
   const value = joined[offset]! * 256 + joined[offset + 1]!;

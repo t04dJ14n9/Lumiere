@@ -15,6 +15,7 @@ import { tableMenu, type TableMenuActions } from "./menu";
 import type { TableGrid } from "./grid";
 import type { TableClipboard } from "./clipboard";
 import type { TableEnvironment } from "./environment";
+import { t } from "@workshop/l10n";
 
 interface MenuSelection {
   range(): CellRange | undefined;
@@ -42,8 +43,8 @@ export class TableToolbar {
   controls(): HTMLElement {
     const controls = document.createElement("div");
     controls.className = "table-controls";
-    this.bindAddStrip(controls, "Add row below", "row", () => this.addRow());
-    this.bindAddStrip(controls, "Add column to the right", "column", () =>
+    this.bindAddStrip(controls, t("Add row below"), "row", () => this.addRow());
+    this.bindAddStrip(controls, t("Add column to the right"), "column", () =>
       this.addColumn(),
     );
     return controls;

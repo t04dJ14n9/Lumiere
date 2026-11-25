@@ -5,6 +5,7 @@ import { codePosition } from "./code-selection";
 import { languageLabel } from "./code-label";
 import { copyWithFeedback } from "./copy-feedback";
 import { decodeDataValue } from "../../markdown/html/helpers";
+import { t } from "@workshop/l10n";
 
 interface CodePassOptions {
   pass: RenderPass;
@@ -136,8 +137,8 @@ function copyButtonForPre(
   const copy = document.createElement("button");
   copy.type = "button";
   copy.className = "copy-code";
-  copy.textContent = "Copy";
-  copy.setAttribute("aria-label", "Copy code");
+  copy.textContent = t("Copy");
+  copy.setAttribute("aria-label", t("Copy code"));
   pre.before(copy);
   copy.addEventListener(
     "click",

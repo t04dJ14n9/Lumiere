@@ -10,6 +10,7 @@ import {
   setInputValidity,
   reportInputValidity,
 } from "./value-input";
+import { t } from "@workshop/l10n";
 
 const bound = new WeakSet<HTMLElement>();
 const lifetimes = new WeakMap<HTMLElement, Map<HTMLElement, () => void>>();
@@ -146,7 +147,7 @@ class PropertyList {
     if (!applied) {
       setInputValidity(
         this.input,
-        "The properties changed. Reopen this field and try again.",
+        t("The properties changed. Reopen this field and try again."),
       );
       reportInputValidity(this.input);
       return false;
@@ -166,7 +167,7 @@ class PropertyList {
     if (value === undefined) {
       setInputValidity(
         input,
-        "Use a tag without spaces or punctuation other than -, _ and /.",
+        t("Use a tag without spaces or punctuation other than -, _ and /."),
       );
       reportInputValidity(input);
     }
@@ -212,7 +213,9 @@ class PropertyList {
       this.input.focus();
       setInputValidity(
         this.input,
-        "This item changed in another editor. Finish the pending entry or press Escape.",
+        t(
+          "This item changed in another editor. Finish the pending entry or press Escape.",
+        ),
       );
       reportInputValidity(this.input);
       return;

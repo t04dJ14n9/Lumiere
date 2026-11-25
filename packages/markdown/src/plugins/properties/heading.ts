@@ -1,4 +1,5 @@
 import { type EditorView, ViewPlugin } from "@codemirror/view";
+import { t } from "@workshop/l10n";
 
 const headingSelector = ".hybrid-properties [data-properties-heading]";
 /** Frames to wait for the header to be rendered after scrolling to it. */
@@ -17,7 +18,7 @@ class PropertyHeadingFocus {
     this.proxy.className = "property-heading-focus";
     this.proxy.tabIndex = -1;
     this.proxy.setAttribute("role", "group");
-    this.proxy.setAttribute("aria-label", "Properties");
+    this.proxy.setAttribute("aria-label", t("Properties"));
     this.proxy.addEventListener("keydown", (event) => {
       if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey) {
         return;

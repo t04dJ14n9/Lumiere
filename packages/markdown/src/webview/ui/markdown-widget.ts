@@ -16,6 +16,7 @@ import {
   watchMarkdownBlock,
 } from "./markdown-block-height";
 import { selectRenderedSource } from "./source-selection";
+import { t } from "@workshop/l10n";
 
 /** A span of a block's source, as offsets into it. */
 export interface SourceSpan {
@@ -64,6 +65,31 @@ interface RetainedShell {
   settled: boolean;
   alive: boolean;
   generation: number;
+}
+
+/**
+ * The Edit button's label for a block of `kind`: whole sentences for the
+ * kinds Lumiere draws, so each reads naturally in the reader's language.
+ */
+function editLabel(kind: string): string {
+  switch (kind) {
+    case "diagram":
+      return t("Edit diagram source");
+    case "math":
+      return t("Edit math source");
+    case "callout":
+      return t("Edit callout source");
+    case "embed":
+      return t("Edit embed source");
+    case "Table":
+      return t("Edit Table source");
+    case "FencedCode":
+      return t("Edit FencedCode source");
+    case "HTMLBlock":
+      return t("Edit HTMLBlock source");
+    default:
+      return t("Edit {0} source", kind);
+  }
 }
 
 const BLOCK_DOM_CACHE_LIMIT = 128;
@@ -212,8 +238,8 @@ export class MarkdownBlock extends WidgetType {
     const edit = document.createElement("button");
     edit.type = "button";
     edit.className = "edit-block";
-    edit.textContent = "Edit";
-    edit.setAttribute("aria-label", `Edit ${this.block.kind} source`);
+    edit.textContent = t("Edit");
+    edit.setAttribute("aria-label", editLabel(this.block.kind));
     const body = document.createElement("div");
     if (this.editing.reveal === "none") {
       shell.append(body);

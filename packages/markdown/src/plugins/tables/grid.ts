@@ -6,6 +6,7 @@ import type { RenderBlock } from "../livePreview/api";
 import { indentRows, rowPrefix } from "./column-widths";
 import type { TableEnvironment } from "./environment";
 import { shownColumn } from "./sort-keys";
+import { t } from "@workshop/l10n";
 
 /** Rendered cells and their current source snapshot. It owns no selection. */
 export class TableGrid {
@@ -33,7 +34,7 @@ export class TableGrid {
   ) {
     this.model = parsedTable(block.source)!;
     this.table.className = "markdown-rendered table-editor";
-    this.table.setAttribute("aria-label", "Markdown table");
+    this.table.setAttribute("aria-label", t("Markdown table"));
     // A wide table scrolls by itself, as in Obsidian, not the whole note.
     this.scroll = document.createElement("div");
     this.scroll.className = "table-scroll";
@@ -314,7 +315,10 @@ function tableCell(row: number, column: number): HTMLElement {
   const cell = document.createElement(row === 0 ? "th" : "td");
   cell.dataset.row = String(row);
   cell.dataset.column = String(column);
-  cell.setAttribute("aria-label", `Row ${row + 1}, column ${column + 1}`);
+  cell.setAttribute(
+    "aria-label",
+    t("Row {0}, column {1}", row + 1, column + 1),
+  );
   const wrapper = document.createElement("div");
   wrapper.className = "table-cell-wrapper";
   cell.append(wrapper);

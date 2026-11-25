@@ -1,4 +1,5 @@
 import { imageControls } from "./image";
+import { t } from "@workshop/l10n";
 
 interface InspectorOptions {
   trigger: HTMLButtonElement;
@@ -79,15 +80,15 @@ class ImageInspector {
   private addActions(toolbar: HTMLElement): void {
     const open = document.createElement("button");
     open.type = "button";
-    open.textContent = "Open image file";
+    open.textContent = t("Open image file");
     open.onclick = () => {
       this.close();
       this.options.openFile();
     };
     const dismiss = document.createElement("button");
     dismiss.type = "button";
-    dismiss.textContent = "Close";
-    dismiss.setAttribute("aria-label", "Close image");
+    dismiss.textContent = t("Close");
+    dismiss.setAttribute("aria-label", t("Close image"));
     dismiss.onclick = () => this.close();
     toolbar.append(open, dismiss);
   }
@@ -99,7 +100,7 @@ class ImageInspector {
     image.addEventListener(
       "error",
       () => {
-        status.textContent = "Could not load this image.";
+        status.textContent = t("Could not load this image.");
       },
       { signal },
     );
@@ -137,9 +138,9 @@ class ImageInspector {
 function inspectorElements(name: string) {
   const dialog = document.createElement("dialog");
   dialog.className = "image-inspector";
-  dialog.setAttribute("aria-label", `Image: ${name}`);
+  dialog.setAttribute("aria-label", t("Image: {0}", name));
   const toolbar = document.createElement("nav");
-  toolbar.setAttribute("aria-label", "Image controls");
+  toolbar.setAttribute("aria-label", t("Image controls"));
   const area = document.createElement("section");
   area.className = "media-area";
   area.setAttribute("aria-label", name);
@@ -147,7 +148,7 @@ function inspectorElements(name: string) {
   image.alt = name;
   const status = document.createElement("p");
   status.setAttribute("role", "status");
-  status.setAttribute("aria-label", "Image status");
-  status.textContent = "Loading image…";
+  status.setAttribute("aria-label", t("Image status"));
+  status.textContent = t("Loading image…");
   return { dialog, toolbar, area, image, status };
 }

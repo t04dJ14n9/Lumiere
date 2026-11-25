@@ -1,3 +1,5 @@
+import { t } from "@workshop/l10n";
+
 export async function openMediaSource({
   media,
   signal,
@@ -17,7 +19,7 @@ export async function openMediaSource({
     });
     signal.addEventListener(
       "abort",
-      () => reject(new Error("Media view closed.")),
+      () => reject(new Error(t("Media view closed."))),
       { once: true },
     );
   });
@@ -54,7 +56,7 @@ export function appendWebm(
     };
     const error = (): void => {
       clean();
-      reject(new Error("WebM stream decoding failed."));
+      reject(new Error(t("WebM stream decoding failed.")));
     };
     const clean = (): void => {
       buffer.removeEventListener("updateend", done);
@@ -71,7 +73,7 @@ export function appendWebm(
       reject(
         cause instanceof Error
           ? cause
-          : new Error("WebM stream could not be appended."),
+          : new Error(t("WebM stream could not be appended.")),
       );
     }
   });

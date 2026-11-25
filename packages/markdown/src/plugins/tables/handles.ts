@@ -6,6 +6,7 @@ import {
   type PointerPoint,
 } from "../../webview/ui/edge-scroll";
 import { nearestEntry, nearestRow } from "./hit-test";
+import { t } from "@workshop/l10n";
 
 interface HandleActions {
   select(axis: Axis, index: number): void;
@@ -79,8 +80,16 @@ export class TableHandles {
     button.className = `table-handle table-${axis}-handle`;
     button.dataset.axis = axis;
     button.dataset.index = String(index);
-    button.title = `Drag to move ${axis}; press Enter for actions`;
-    button.setAttribute("aria-label", `Move ${axis} ${index + 1}`);
+    button.title =
+      axis === "row"
+        ? t("Drag to move row; press Enter for actions")
+        : t("Drag to move column; press Enter for actions");
+    button.setAttribute(
+      "aria-label",
+      axis === "row"
+        ? t("Move row {0}", index + 1)
+        : t("Move column {0}", index + 1),
+    );
     button.setAttribute("aria-haspopup", "menu");
     button.textContent = axis === "row" ? "⠿" : "⠶";
     wrapper.append(button);
