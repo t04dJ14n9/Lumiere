@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.35 (2026-11-25)
 
 - Lumiere installs on VS Code 1.101 and later (it required 1.128), so
   editors built on an older VS Code, such as CodeBuddy (1.106), can run it.
