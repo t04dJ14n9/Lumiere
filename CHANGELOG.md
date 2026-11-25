@@ -6,6 +6,9 @@
   is the first translation: every command, setting description and view
   name, and the PDF viewer's side panel; the rest of Lumiere's text
   follows.
+- Copy Link for Agent names a note outside the workspace by its plain path
+  even when the path has spaces, `@/notes/AI 活动/a.md#20-24`, instead of a
+  percent-encoded `file:///` URI.
 
 ## 0.1.31 (2026-11-25)
 
