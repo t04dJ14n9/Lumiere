@@ -48,7 +48,15 @@ The widget ignores events, so CodeMirror never hears a wheel over it; another
 passive listener reports vertical table wheel input through the editor's
 public scroll-input event, which cancels saved-view scroll restoration.
 
-Drag a column's right border, in any row, to set its width. Within 2 px
+A table is at most as wide as the note, and its cells wrap: the browser's
+table layout gives short columns their full width and shares the rest among
+long ones. A column the browser sizes narrows only to a readable measure (its
+text's full width when short, else about 12 characters, `calc-size()` in
+`tables.css`); past that the table grows wider than the note and scrolls
+sideways. An open cell wraps the same way, so opening it keeps the column.
+
+Drag a column's right border, in any row, to set its width; dragged widths
+may go below the readable measure. Within 2 px
 of the border the cursor turns to `col-resize` and an accent guide runs down
 the table; 3 px in, a press is the cell's again (it opens at the end of the
 text, or in the next cell at the start). While dragging, every other column

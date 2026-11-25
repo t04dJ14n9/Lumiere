@@ -136,10 +136,16 @@
      note scroller owns vertical motion. */
   overflow-y: hidden;
 }
+/*
+ * The table takes the note's width at most, and its cells wrap (the browser's
+ * auto table layout gives short columns their full width and shares the rest
+ * among long ones). Past the cells' readable minimum (.table-cell-wrapper)
+ * it grows wider than the note and scrolls.
+ */
 .table-wrapper {
   display: grid;
-  width: max-content;
-  grid-template-columns: max-content 16px;
+  width: fit-content;
+  grid-template-columns: auto 16px;
   grid-template-rows: auto 16px;
   gap: 0;
   padding: 16px 0 0 16px;
@@ -147,6 +153,12 @@
 .table-cell-wrapper {
   position: relative;
   min-height: 1.3em;
+}
+/* A column the browser sizes narrows only to a readable measure: its text's
+   full width when short, else about 12 characters. Dragged widths
+   (column-resize.ts) go below it. */
+.hybrid-table table:not(.table-sized-columns) .table-cell-wrapper {
+  min-width: calc-size(max-content, min(size, 12em));
 }
 .table-cell-content {
   min-height: 1.3em;
@@ -299,6 +311,15 @@
   line-height: 1.3;
 }
 #app .hybrid-table .cm-editor .cm-content {
+  /* An open cell wraps as its rendered text does, so opening it keeps the
+     column's width. CodeMirror's own lineWrapping, as CSS: a feature may not
+     set that facet (composition-policy.test.ts), and CodeMirror reads the
+     wrapping from this computed style. Up and Down still leave the cell only
+     from its first or last visual line (navigation.ts). */
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  flex-shrink: 1;
   padding: 0;
   min-height: 1.3em;
   width: auto;
