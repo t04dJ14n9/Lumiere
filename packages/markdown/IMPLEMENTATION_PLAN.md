@@ -9590,3 +9590,124 @@ editor (it is 15).
 
 No code changed. `pnpm check` passes. The Markdown documents are not part of
 `pnpm check`: Prettier ignores `*.md`, and no test reads them.
+
+## A note opens without moving (owner report, 2026-11-27)
+
+Report: "the properties and other component introduction animation is ugly".
+Measured in the real webview, 4x CPU throttle, a screencast per opening, on two
+notes of the owner's vault (a note with a 13-row Properties sheet, callouts and
+tables; a note with 20 rows). What the eye saw:
+
+1. Snapshot path (the common one in VS Code). 274 of 307 notes of the vault have
+   frontmatter the old snapshot could not size (a YAML line over 80 characters, a
+   nested value, more than 5 list items). It drew a bold "Properties" label and
+   then nothing, for 0.6 to 1.2 s, and `snapshot.remove()` cut to the finished
+   editor in one frame.
+2. No-snapshot path (a restored view, a search match, Source mode, readable line
+   length). The lone label over a blank reserve; a black bar the height of the
+   reserve at the left (the caret at position 0 beside the block widget:
+   `coordsAtPos` of a block widget is the whole widget); no gutters; raw
+   `> [!warning]` and pipe text. Then in one frame the sheet, the gutters (all
+   the text moves 69 px right: line numbers at `mw:properties`, change bars and
+   fold markers a phase later) and the callouts and tables, with every block
+   below reflowing.
+
+Design, in the order the problems were fixed:
+
+- The Properties skeleton (`markdown/properties/frontmatter-skeleton.ts`): the
+  sheet's own rows, muted, from a line scan of the YAML (no parse, so the YAML
+  runtime stays out of the first paint), in the sheet's own classes and DOM
+  shape. The host cannot know the pane's width, so no pixel estimate can be
+  exact for wrapping text or chips; drawing the rows with the real box model
+  makes the browser the estimator. Only a value the scan reads exactly is drawn
+  that way (scalars as YAML 1.2's core schema reads them, quoted strings
+  without escapes, flow and block lists of scalars up to 50 items, single
+  wikilinks); anything else is one line of source and the sheet is not exact.
+  The snapshot continues below an exact skeleton (`isEstimable` is gone). A
+  throwaway probe compared every row's top and height against the real sheet at
+  520, 760 and 1100 px on both notes and a synthetic note with every value kind:
+  equal to the pixel (the first draft was 4.5 px short on list rows: an
+  editable `multi-select-input` is a line tall even when empty).
+- The real sheet starts from the height its skeleton measured
+  (`markdown/properties/sheet-height-memory.ts`). CodeMirror lays the gutter out
+  from the widget's estimate until it measures it, and the estimate was 2 px
+  short, so the line numbers below the sheet moved for a frame or two when the
+  sheet mounted. That, with the caret blink and the fold marker's 120 ms
+  opacity transition, was the "gutter flicker"; the first is fixed, the others
+  are not flicker.
+- Crossfade (`webview/snapshot.ts`): the snapshot fades out over the editor for
+  100 ms, from the moment it used to be removed. The editor beneath is complete
+  and takes input at once, the snapshot never takes pointer events, and a
+  `transitionend` listener plus a timer remove it; with reduced motion it goes
+  at once.
+- `is-opening` (`webview/opening.ts`): set on the page's parent when the editor
+  mounts without a covering snapshot, cleared 100 ms after the features have
+  loaded (3 s at the latest). `webview/styles/opening.css` animates only under
+  it, so widgets that CodeMirror mounts again on a scroll never animate;
+  everything is opacity, from partly visible (0.4, or the skeleton's 0.55 for
+  the sheet) so nothing that was readable fades in; nothing animates with
+  `prefers-reduced-motion`. Nothing waits on it.
+- Gutters: until each of the line numbers, change bars and fold markers mounts,
+  an empty strip of its width (CSS `order` after the gutters mounted so far)
+  keeps the text in its place. Measured at every state, for all eight
+  combinations of the three features, the first line of text is at the same x
+  from the first frame to the last (69.1 px with all three). The `:last-child`
+  rules that give VS Code's 26 px gap are suspended for a gutter that is last
+  only for now.
+- The caret is not drawn inside a block widget, focused or not
+  (`caret-geometry.ts`): before, only a blurred editor skipped it. A focused
+  outer caret in a block widget is always the placeholder before Properties'
+  caret guard moves it, or a table whose cell editor draws its own.
+- Pending blocks (`livePreview/pending-blocks.ts`): while a callout, table,
+  display math, Mermaid fence or embed's feature is on but has not registered,
+  the block is an empty `DeferredBlockWidget` of its estimated height instead
+  of raw Markdown. `shared/first-view.ts` lists, for each first-view feature,
+  the block it draws or says it draws none (a unit test fails for a feature in
+  neither). The shells are in one compartment: a feature's renderer replaces
+  its shell, and `editor/featuresLoaded` drops the rest, so a feature that
+  failed shows its source, never a permanent blank. The frontmatter placeholder
+  joined them: with Properties off, hidden or shown as source it used to stay
+  in place of the frontmatter for good.
+
+Limits. Inline decorations that change a line's text (links, tags, footnote
+marks, task boxes, inline math and images) still come in place without a
+reveal; the text of the line reflows when a wikilink's brackets go. Images and
+diagrams that load later do not fade in on their own load; they are revealed
+with their block. A note whose Properties are stored collapsed still paints one
+expanded frame (the flag reaches the webview only after the sheet exists). The
+reserve assumes a left-to-right page. The skeleton draws no row icons (a
+16 px box), so they appear with the sheet.
+
+Tests. `test/unit/properties/frontmatter-skeleton.test.ts` (the scan, the markup,
+the chrome equal to the sheet's, no YAML in the import graph),
+`sheet-height-memory.test.ts`, `test/unit/webview/opening.test.ts` (the lifecycle,
+the crossfade, the reserve classes, the CSS rules that keep animation under
+`.is-opening`), `src/plugins/livePreview/pending-blocks.test.ts` and
+`test/unit/livePreview/pending-blocks-match.test.ts`, and the snapshot tests.
+`first-paint-snapshot.spec.ts` now holds the frontmatter note to the same
+0.5 px as every other (it had a 2 px allowance).
+
+Opening speed. The owner's constraint was that no animation, skeleton or
+reserve may add time before the editor is usable. The marks (`mw:ready`,
+`mw:first-paint`, `mw:properties`, `mw:features`) were measured at 4x CPU
+throttle in the real webview, on the two notes above and on a 100-property
+note, the old build and the new one alternating run by run (12 to 16 pairs per
+configuration; the machine's drift between runs is larger than the effect, so
+unpaired medians are not comparable). The paired medians of the new build minus
+the old, in ms, were between -6 and +12 for every mark of every configuration,
+the new build slower in about half the pairs. The entry (`editor.js`,
+minified) is 702,317 bytes before and 711,399 after (gzip 227,603 and 230,996),
+`editor.css` 77,443 and 80,054 (gzip 15,233 and 15,724).
+
+The first measurement was not as good: the no-snapshot opening of the first note
+was 14 to 32 ms slower per mark in 12 of 16 pairs. A trace (`devtools.timeline`)
+put it in `UpdateLayoutTree`, 114 ms against 164 ms, and removing the
+gutter-reserve CSS block brought it back. The cause was not a rule but the
+reserve's widths being custom properties set on `.cm-scroller`: custom
+properties inherit, so changing one as each gutter mounted restyled every
+element of the note. They are now properties of the strip's own `::before`
+(nothing inherits them) and the `:has()` tests look at children only;
+`test/unit/webview/opening.test.ts` pins both. With that, `UpdateLayoutTree` is
+123 ms against 128, and the paired marks are as above. (Without the reveal
+animations it had been 150 ms against 164, so they were a quarter of it and the
+gutter block the rest.)
