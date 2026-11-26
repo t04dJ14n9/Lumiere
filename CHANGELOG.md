@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- A new icon: a typeset capital L made of light, with a spark where the
+  beam turns, for notes that render as you write them. `media/icon.svg` is
+  its source; `media/icon.png` is drawn from it at 256 pixels.
+
 ## 0.1.38 (2026-11-26)
 
 - Markdown: back and forward arrows on the status bar, as the PDF viewer
