@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Markdown: the diagram and image inspector keeps the drawing centred after
+  zooming in or out, instead of jumping it to the top left, and still lets
+  you scroll to every edge of a drawing larger than the window. Over a
+  diagram's labels the pointer is a text cursor, since dragging there
+  selects the text.
 - A new icon: a typeset capital L made of light, with a spark where the
   beam turns, for notes that render as you write them. `media/icon.svg` is
   its source; `media/icon.png` is drawn from it at 256 pixels.
