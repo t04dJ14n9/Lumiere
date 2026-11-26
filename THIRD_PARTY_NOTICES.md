@@ -6475,41 +6475,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## @iconify-json/fa6-brands 1.2.6
-
-License: CC-BY-4.0  
-Source: https://icon-sets.iconify.design/fa6-brands/
-
-The package ships no license file; its package.json declares the license above.
-
-## @iconify-json/fa6-regular 1.2.4
-
-License: CC-BY-4.0  
-Source: https://icon-sets.iconify.design/fa6-regular/
-
-The package ships no license file; its package.json declares the license above.
-
-## @iconify-json/fa6-solid 1.2.4
-
-License: CC-BY-4.0  
-Source: https://icon-sets.iconify.design/fa6-solid/
-
-The package ships no license file; its package.json declares the license above.
-
-## @iconify-json/logos 1.2.21
-
-License: CC0-1.0  
-Source: https://icon-sets.iconify.design/logos/
-
-The package ships no license file; its package.json declares the license above.
-
-## @iconify-json/material-icon-theme 1.2.77
-
-License: MIT  
-Source: https://icon-sets.iconify.design/material-icon-theme/
-
-The package ships no license file; its package.json declares the license above.
-
 ## @iconify/utils 3.1.7
 
 License: MIT  

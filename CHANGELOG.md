@@ -10,9 +10,6 @@
 - Markdown: User Journey section titles and Event Modeling boxes show their
   labels before Allow; they were blank because the sanitizer dropped
   `<foreignObject>`.
-- Markdown: Mermaid icons draw. Font Awesome (`fa:fa-car`, after Allow),
-  `logos:` and `material-icon-theme` icons used to show as text or a `?` box;
-  each pack loads the first time a diagram uses it.
 - Markdown: treeView diagrams take the editor's text and line colors, so their
   file names are readable on a dark theme.
 

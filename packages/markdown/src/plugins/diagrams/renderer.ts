@@ -11,7 +11,6 @@ import {
 import { errorMessage } from "../../shared/errors";
 import { createMermaidTrust, type MermaidTrust } from "./trust";
 import { MermaidQueue } from "./mount-queue";
-import { registerIconPacks } from "./icon-packs";
 import { bindDiagramInspector } from "./diagram-dialog";
 import { defaultSankeyNodeColors } from "./sankey";
 import { mermaidTransaction } from "./mermaid-session";
@@ -178,7 +177,6 @@ export class DiagramRenderer {
     initialize: boolean,
   ): Promise<string> {
     const { default: mermaid } = await import("mermaid");
-    registerIconPacks(mermaid);
     // Trust enables HTML labels, not loose Mermaid security or unsanitized output.
     const { trusted, palette } = appearance;
     const configuration = mermaidConfiguration(palette, trusted);
