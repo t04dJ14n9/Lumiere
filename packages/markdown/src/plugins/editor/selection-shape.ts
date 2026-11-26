@@ -104,3 +104,39 @@ const LIST_ITEM = /^([ \t]*)(?:[-*+]|\d{1,9}[.)])(?:[ \t]|$)/;
 export function listIndentEnd(lineText: string): number {
   return LIST_ITEM.exec(lineText)?.[1]?.length ?? 0;
 }
+
+/** Where a selection's caret sits, in the same coordinates as the boxes. */
+export interface CaretPoint {
+  x: number;
+  y: number;
+}
+
+/**
+ * Square the corners on the side where a caret meets the selection, as VS
+ * Code does: a rounded corner beside the caret leaves a notch between the
+ * caret and the tint. `tolerance` covers a Vim visual selection, which tints
+ * the character under the caret, so the caret can sit up to one character
+ * inside the box's edge.
+ */
+export function squareAtCarets(
+  boxes: ShapedBox[],
+  carets: CaretPoint[],
+  tolerance: number,
+): ShapedBox[] {
+  return boxes.map((box) => {
+    const square = new Set(box.square);
+    const right = box.left + box.width;
+    for (const caret of carets) {
+      if (caret.y < box.top || caret.y > box.top + box.height) {
+        continue;
+      }
+      if (Math.abs(caret.x - box.left) <= tolerance) {
+        square.add("tl").add("bl");
+      }
+      if (Math.abs(caret.x - right) <= tolerance) {
+        square.add("tr").add("br");
+      }
+    }
+    return { ...box, square: [...square] };
+  });
+}

@@ -7,6 +7,7 @@ import type { Footnote } from "../../markdown/metadata/footnotes";
 import type { InlineContext, InlineRenderer } from "../livePreview/api";
 import type { RenderService } from "../render/api";
 import { FootnoteReference, referenceText } from "./reference-widget";
+import { followsReference, REFERENCE_LOOKBEHIND } from "./adjacent";
 
 /**
  * Footnotes in Live Preview, LaTeX paper style (a deliberate departure from
@@ -65,10 +66,14 @@ export function footnoteInline(
         });
         return;
       }
+      const before = cx.state.doc.sliceString(
+        Math.max(0, node.from - REFERENCE_LOOKBEHIND),
+        node.from,
+      );
       cx.replace(
         node.from,
         node.to,
-        new FootnoteReference(note, render, navigate),
+        new FootnoteReference(note, render, navigate, followsReference(before)),
       );
     },
   };

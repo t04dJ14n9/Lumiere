@@ -25,6 +25,10 @@
   line-height: 1;
   cursor: pointer;
 }
+/* [^30][^31]: a comma keeps two numbers from reading as one ("3031"). */
+.mw-footnote-ref-follows::before {
+  content: ",";
+}
 .mw-footnote-ref > button:hover,
 .mw-footnote-ref > button:focus-visible {
   color: var(--accent);

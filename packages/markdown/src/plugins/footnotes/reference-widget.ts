@@ -20,6 +20,8 @@ interface ReferenceOptions {
   render: RenderService;
   navigate(): void;
   measure(): void;
+  /** It directly follows another reference: drawn after a comma. */
+  follows?: boolean;
 }
 
 /** Both inline widgets and references inside rendered blocks use this control. */
@@ -58,6 +60,7 @@ class ReferenceControl {
     // and its absolute position, this is the explicit marker).
     this.preview.setAttribute("data-mw-selection-ignore", "");
     sup.classList.add("mw-footnote-ref");
+    sup.classList.toggle("mw-footnote-ref-follows", options.follows === true);
     sup.replaceChildren(this.button, this.preview);
     this.registerEvents();
   }
@@ -166,6 +169,7 @@ export class FootnoteReference extends WidgetType {
     readonly note: Footnote,
     private readonly render: RenderService,
     private readonly navigate: (jump: () => void) => void = (jump) => jump(),
+    private readonly follows = false,
   ) {
     super();
   }
@@ -175,7 +179,8 @@ export class FootnoteReference extends WidgetType {
       this.note.text === other.note.text &&
       this.note.label === other.note.label &&
       this.note.number === other.note.number &&
-      this.note.from === other.note.from
+      this.note.from === other.note.from &&
+      this.follows === other.follows
     );
   }
   override toDOM(view: EditorView): HTMLElement {
@@ -188,6 +193,7 @@ export class FootnoteReference extends WidgetType {
           this.navigate(() => selectFootnoteDefinition(view, this.note.from));
         },
         measure: () => view.requestMeasure(),
+        follows: this.follows,
       }),
     );
     return sup;
