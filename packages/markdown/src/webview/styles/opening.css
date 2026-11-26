@@ -77,7 +77,11 @@
  * mounted (flex `order`) and is as wide as the ones still to come: the
  * numbers' five digits at the gutter's 12px code font, the bars' 7px and the
  * fold area's 24px (14px without numbers), and the 26px gap VS Code leaves
- * after the last gutter when there is no fold area.
+ * after the last gutter when there is no fold area. The `:has()` tests look
+ * only at the scroller's children and the gutters', and the widths are custom
+ * properties of the strip itself: one inherited from the scroller, changed as
+ * each gutter mounts, would restyle every element of the note (measured: 40 ms
+ * of style recalculation on a note of a few thousand elements at 4x CPU).
  */
 .is-opening .cm-scroller > .cm-content {
   order: 2;
@@ -102,27 +106,30 @@
   > .cm-content {
   padding-inline-start: 0;
 }
-.is-opening.opens-with-line-numbers .cm-scroller:not(:has(.cm-lineNumbers)) {
+.is-opening.opens-with-line-numbers
+  .cm-scroller:not(:has(> .cm-gutters > .cm-lineNumbers))::before {
   --mw-reserve-numbers: calc(5ch + 2px);
 }
 .is-opening.opens-with-line-numbers:not(.opens-with-git-gutter):not(
     .opens-with-fold-gutter
   )
-  .cm-scroller:not(:has(.cm-lineNumbers)) {
+  .cm-scroller:not(:has(> .cm-gutters > .cm-lineNumbers))::before {
   --mw-reserve-numbers: calc(5ch + 26px);
 }
-.is-opening.opens-with-git-gutter .cm-scroller:not(:has(.mw-git-gutter)) {
+.is-opening.opens-with-git-gutter
+  .cm-scroller:not(:has(> .cm-gutters > .mw-git-gutter))::before {
   --mw-reserve-bars: 26px;
 }
 .is-opening.opens-with-git-gutter.opens-with-fold-gutter
-  .cm-scroller:not(:has(.mw-git-gutter)) {
+  .cm-scroller:not(:has(> .cm-gutters > .mw-git-gutter))::before {
   --mw-reserve-bars: 7px;
 }
-.is-opening.opens-with-fold-gutter .cm-scroller:not(:has(.cm-foldGutter)) {
+.is-opening.opens-with-fold-gutter
+  .cm-scroller:not(:has(> .cm-gutters > .cm-foldGutter))::before {
   --mw-reserve-folds: 24px;
 }
 .is-opening.opens-with-fold-gutter:not(.opens-with-line-numbers)
-  .cm-scroller:not(:has(.cm-foldGutter)) {
+  .cm-scroller:not(:has(> .cm-gutters > .cm-foldGutter))::before {
   --mw-reserve-folds: 14px;
 }
 /* A gutter that is last for now is not last for good: no 26px gap yet. */

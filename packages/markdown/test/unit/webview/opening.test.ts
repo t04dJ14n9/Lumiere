@@ -286,3 +286,29 @@ test("the Properties sheet is awaited only where Properties shows it", () => {
   assert.equal(awaits(properties(true, "source")), false);
   assert.equal(awaits(properties(false)), false);
 });
+
+test("the gutter reserve's widths are properties of its own strip, and its tests stay shallow", () => {
+  // An inherited custom property changed on the scroller as each gutter
+  // mounts restyles every element of the note (40 ms of style recalculation
+  // at 4x CPU on a note of a few thousand elements), and a `:has()` that
+  // looks through the whole subtree is dearer still.
+  const rules = [
+    ...css.replace(/\/\*[^]*?\*\//g, "").matchAll(/([^{}]+)\{([^{}]*)\}/g),
+  ];
+  const declaring = rules.filter(([, , body]) =>
+    /--mw-reserve-[a-z]+:/.test(body!),
+  );
+  assert.ok(declaring.length >= 6);
+  for (const [, selector] of declaring) {
+    assert.match(
+      selector!.trim(),
+      /::before$/,
+      "the width is set on the strip",
+    );
+  }
+  for (const [, selector] of rules) {
+    for (const [, test] of selector!.matchAll(/:has\(([^)]*)\)/g)) {
+      assert.match(test!, /^>/, `:has(${test}) looks at children only`);
+    }
+  }
+});
