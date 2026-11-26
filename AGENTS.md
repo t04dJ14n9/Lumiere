@@ -178,3 +178,12 @@ test fixtures (whose hashes are pinned) as they are.
 
 Commit at the end of each phase with its record in IMPLEMENTATION_PLAN.md.
 Do not push or publish to the Marketplace without the owner's approval.
+
+## Releasing
+
+With the owner's approval, and once every change it ships is merged: on
+`main`, set `package.json`'s `version` and turn CHANGELOG.md's `## Unreleased`
+into `## X.Y.Z (YYYY-MM-DD)` (`(pre-release, YYYY-MM-DD)` for that channel),
+commit it as "Release X.Y.Z" straight to `main` (no pull request: the release
+workflow runs the merge gate's suites on that commit before it publishes),
+push, then push the tag `vX.Y.Z` on that commit.
