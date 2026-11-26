@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+<defs>
+  <radialGradient id="bg" cx="38%" cy="70%" r="85%">
+    <stop offset="0" stop-color="#2b2f6e"/><stop offset="0.55" stop-color="#161a45"/><stop offset="1" stop-color="#0a0b1f"/>
+  </radialGradient>
+  <radialGradient id="halo" cx="50%" cy="50%" r="50%">
+    <stop offset="0" stop-color="#fff6d8" stop-opacity="0.95"/>
+    <stop offset="0.25" stop-color="#ffd27a" stop-opacity="0.6"/>
+    <stop offset="0.6" stop-color="#ff9e4a" stop-opacity="0.18"/>
+    <stop offset="1" stop-color="#ff9e4a" stop-opacity="0"/>
+  </radialGradient>
+  <linearGradient id="down" x1="0" y1="40" x2="0" y2="176" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#7d8cff" stop-opacity="0.32"/><stop offset="0.7" stop-color="#a9b4ff" stop-opacity="0.85"/><stop offset="1" stop-color="#ffe2a0"/>
+  </linearGradient>
+  <linearGradient id="out" x1="88" y1="0" x2="222" y2="0" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#ffe2a0"/><stop offset="0.3" stop-color="#a9b4ff" stop-opacity="0.85"/><stop offset="1" stop-color="#7d8cff" stop-opacity="0.28"/>
+  </linearGradient>
+  <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffd98a"/>
+  </linearGradient>
+</defs>
+<rect width="256" height="256" rx="56" fill="url(#bg)"/>
+<g transform="translate(-10 13)">
+<path d="M58 44 L118 44 L118 52 Q 104 52 102 60 L102 160 L190 160 Q 204 160 210 140 L218 140 L214 186 L58 186 L58 178 Q 72 178 74 170 L74 60 Q 72 52 58 52 Z"
+      fill="url(#down)" opacity="0.95"/>
+<path d="M88 56 L88 172 L200 172" fill="none" stroke="#ffffff" stroke-opacity="0.35" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="88" cy="172" r="74" fill="url(#halo)"/>
+<path d="M88.00,112.00 L91.67,163.13 L105.82,154.18 L96.87,168.33 L148.00,172.00 L96.87,175.67 L105.82,189.82 L91.67,180.87 L88.00,232.00 L84.33,180.87 L70.18,189.82 L79.13,175.67 L28.00,172.00 L79.13,168.33 L70.18,154.18 L84.33,163.13 Z" fill="url(#gold)"/>
+<circle cx="88" cy="172" r="10" fill="#ffffff"/>
+</g>
+</svg>

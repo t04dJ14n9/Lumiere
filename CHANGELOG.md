@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- A new icon: a typeset capital L made of light, with a spark where the
+  beam turns, for notes that render as you write them. `media/icon.svg` is
+  its source; `media/icon.png` is drawn from it at 256 pixels.
 - Markdown: consecutive footnote references (`[^30][^31]`) read "30,31"
   instead of running together as "3031", in Live Preview and in tables and
   callouts.
