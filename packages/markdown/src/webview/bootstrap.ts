@@ -5,7 +5,8 @@ import { preloadChromeFeatures, preloadPaintFeatures } from "./features";
 import { runFeaturePhases } from "./feature-phases";
 import { headerParts } from "../markdown/properties/header-parts";
 import { registerEditorSettings } from "./editor-settings";
-import { settleSnapshot } from "./snapshot";
+import { coveringSnapshot, settleSnapshot } from "./snapshot";
+import { beginOpening, endOpening } from "./opening";
 import { requestReady } from "./ready";
 import { createRoot, type RootContext } from "@workshop/core";
 import type { Infer } from "@workshop/core";
@@ -37,27 +38,18 @@ export async function bootstrap(
   const init = await requestReady(rpc);
   performance.mark("mw:ready");
   logging.configure(init.debugLogging);
+  // The snapshot's crossfade is the one reveal when it covers the editor.
+  const isOpening = !coveringSnapshot(parent, init);
+  if (isOpening) {
+    beginOpening(parent);
+  }
   const root = createRoot({
     logger: logging.logger,
     rank: pluginRank,
   });
   root.provide("rpc", rpc);
   root.effect(() => rpc.on(protocol, "configureLogging", logging.configure));
-  root.plugin(documentWebview, init);
-  root.plugin(dialectWebview);
-  const editor = root.plugin(editorWebview, {
-    ...init,
-    parent,
-    ...presentation,
-    mode: init.preset === "minimal" ? "source" : init.mode,
-  });
-  root.plugin(commandsWebview);
-  root.plugin(markersWebview);
-  if (init.preset === "obsidian") {
-    root.plugin(resourcesWebview);
-    root.plugin(renderWebview, { trusted: init.trusted });
-    root.plugin(livePreviewWebview, { mode: init.mode });
-  }
+  const editor = mountPlugins(root, init, { parent, ...presentation });
   registerEditorSettings(root, rpc, editor);
   const configure = pluginReporting(root, rpc);
   // Chrome (Properties + lineNumbers) must not share the settle-window wire
@@ -85,8 +77,40 @@ export async function bootstrap(
     defaults: init.preset === "obsidian",
   });
   settleSnapshot(parent, init, featuresLoaded);
+  if (isOpening) {
+    endOpening(parent, featuresLoaded);
+  }
   rpc.notify(protocol, "initialized", {});
   return root;
+}
+
+type Init = Awaited<ReturnType<typeof requestReady>>;
+
+/** The plugin tree of a note: the core ones, and Live Preview's for the Obsidian preset. */
+function mountPlugins(
+  root: RootContext,
+  init: Init,
+  editorOptions: {
+    parent: HTMLElement;
+    saved?: unknown;
+    persist?: (state: Infer<typeof viewState>) => void;
+  },
+) {
+  root.plugin(documentWebview, init);
+  root.plugin(dialectWebview);
+  const editor = root.plugin(editorWebview, {
+    ...init,
+    ...editorOptions,
+    mode: init.preset === "minimal" ? "source" : init.mode,
+  });
+  root.plugin(commandsWebview);
+  root.plugin(markersWebview);
+  if (init.preset === "obsidian") {
+    root.plugin(resourcesWebview);
+    root.plugin(renderWebview, { trusted: init.trusted });
+    root.plugin(livePreviewWebview, { mode: init.mode });
+  }
+  return editor;
 }
 
 /** The settle window's chrome chunks; Properties only for a note with frontmatter. */

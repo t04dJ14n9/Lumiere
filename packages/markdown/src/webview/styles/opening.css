@@ -1,0 +1,70 @@
+/*
+ * What shows while a note opens: the Properties skeleton (the sheet's own rows,
+ * muted, drawn before Properties loads: markdown/properties/frontmatter-skeleton.ts)
+ * and the short reveals of what loads late. See webview/opening.ts.
+ */
+:root {
+  /* The skeleton's opacity, and where the real sheet's reveal starts from. */
+  --mw-skeleton-opacity: 0.55;
+}
+.mw-properties-skeleton {
+  opacity: var(--mw-skeleton-opacity);
+  pointer-events: none;
+  user-select: none;
+}
+/* An input's text never wraps; the key was one. */
+.mw-properties-skeleton .property-key {
+  display: block;
+  white-space: nowrap;
+}
+.mw-properties-skeleton .metadata-add-button {
+  cursor: default;
+}
+/* A row the scan could not read: one line of its source (as `mod-unknown`). */
+.mw-properties-skeleton .mw-skeleton-opaque {
+  box-sizing: border-box;
+  padding: 4px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* An editable input is one line tall even when empty; this one is not editable. */
+.mw-properties-skeleton .multi-select-input {
+  min-height: calc(1.5em + 8px);
+}
+
+/*
+ * The snapshot goes by crossfade: the editor beneath is complete, and the
+ * snapshot takes no pointer events, so only what the reader sees waits for it.
+ */
+.mw-snapshot.is-leaving {
+  opacity: 0;
+  transition: opacity var(--mw-reveal-ms) ease-out;
+}
+
+/*
+ * What the features draw late is revealed once, while the note opens
+ * (`.is-opening`, webview/opening.ts), from partly visible, so the text
+ * that was already there never fades. Widgets CodeMirror mounts again
+ * on a scroll are not animated.
+ */
+:root {
+  --mw-reveal-ms: 100ms;
+}
+@keyframes mw-reveal-sheet {
+  from {
+    opacity: var(--mw-skeleton-opacity);
+  }
+}
+.is-opening .hybrid-properties:not(.mw-frontmatter-placeholder) {
+  animation: mw-reveal-sheet var(--mw-reveal-ms) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mw-snapshot.is-leaving {
+    transition: none;
+  }
+  .is-opening * {
+    animation: none !important;
+  }
+}

@@ -20,6 +20,8 @@ export interface SnapshotLayout {
   readonly tabSize: number;
   /** Whether Properties draws the frontmatter (a sheet the snapshot reserves). */
   readonly properties: boolean;
+  /** Properties' list preview: above 0 a list shows fewer chips than the skeleton. */
+  readonly listPreviewCount: number;
   /** Whether tags are drawn as tags (otherwise they stay plain text). */
   readonly tags: boolean;
 }
@@ -91,11 +93,21 @@ export function snapshotLayout(
   const display = feature("properties")?.config.display ?? "visible";
   const properties = isOn("properties") && display === "visible";
   const tags = isOn("tags");
+  const listPreviewCount = Number(
+    feature("properties")?.config.listPreviewCount ?? 0,
+  );
   return {
-    key: JSON.stringify({ vars, tabSize: editor.tabSize, properties, tags }),
+    key: JSON.stringify({
+      vars,
+      tabSize: editor.tabSize,
+      properties,
+      listPreviewCount,
+      tags,
+    }),
     vars,
     tabSize: editor.tabSize,
     properties,
+    listPreviewCount,
     tags,
   };
 }

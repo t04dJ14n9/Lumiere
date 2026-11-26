@@ -5,7 +5,7 @@ import { headerParts } from "../../markdown/properties/header-parts";
 import {
   frontmatterPlaceholderHeight,
   FRONTMATTER_PLACEHOLDER_CLASS,
-  frontmatterPlaceholderMarkup,
+  frontmatterPlaceholder,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
 import { blockRenderers } from "./registry";
@@ -76,13 +76,13 @@ class FrontmatterPlaceholder extends WidgetType {
     const wrapper = document.createElement("div");
     wrapper.className = FRONTMATTER_PLACEHOLDER_CLASS;
     wrapper.setAttribute("aria-hidden", "true");
-    // Mirror collapsed Properties chrome so CSS already on the editor sheet
-    // paints a familiar bar; the real PropertyWidget replaces this on configure.
-    // minHeight still tracks the expanded estimate so body layout stays put.
-    wrapper.innerHTML = frontmatterPlaceholderMarkup();
-    const reserve = this.estimatedHeight;
-    if (reserve > 0 && wrapper.style) {
-      wrapper.style.minHeight = `${reserve}px`;
+    // The sheet's rows, muted, in the sheet's own classes: the real
+    // PropertyWidget replaces it on configure without moving anything. A
+    // skeleton that cannot be exact keeps the expanded estimate as a floor.
+    const { markup, minHeight } = frontmatterPlaceholder(this.source);
+    wrapper.innerHTML = markup;
+    if (minHeight > 0 && wrapper.style) {
+      wrapper.style.minHeight = `${minHeight}px`;
     }
     return wrapper;
   }

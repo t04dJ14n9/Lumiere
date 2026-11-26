@@ -28,7 +28,11 @@ function text(html: string): string[] {
     );
 }
 
-/** The elements and attributes the snapshot may contain: nothing that acts. */
+/**
+ * The elements and attributes the snapshot may contain: nothing that acts.
+ * The Properties skeleton's inputs are read-only, its link has no `href` and
+ * its button no handler; it draws two icons as inline SVG.
+ */
 function assertInert(html: string): void {
   const tags = html.match(/<[^>]*>/g) ?? [];
   const allowed = [
@@ -36,15 +40,36 @@ function assertInert(html: string): void {
     "style",
     "aria-hidden",
     "data-layout",
-    "data-properties-heading",
+    "type",
+    "tabindex",
+    "readonly",
+    "disabled",
+    "checked",
+    "value",
+    "inputmode",
+    "step",
+    "data-property-input",
+    "data-placeholder",
+    "data-lucide",
+    "xmlns",
+    "width",
+    "height",
+    "viewBox",
+    "fill",
+    "stroke",
+    "stroke-width",
+    "stroke-linecap",
+    "stroke-linejoin",
+    "d",
   ];
   for (const tag of tags) {
-    const match = /^<\/?(div|span|br|wbr)((?:\s+[a-z-]+(?:="[^"]*")?)*)>$/.exec(
-      tag,
-    );
+    const match =
+      /^<\/?(div|span|br|wbr|svg|path|input|a|button)((?:\s+[A-Za-z-]+(?:="[^"]*")?)*)\s*\/?>$/.exec(
+        tag,
+      );
     assert.ok(match, `unexpected markup ${tag}`);
     const names = match[2]!.replace(/="[^"]*"/g, "");
-    for (const [, name] of names.matchAll(/\s([a-z-]+)/g)) {
+    for (const [, name] of names.matchAll(/\s([A-Za-z-]+)/g)) {
       assert.ok(allowed.includes(name!), `unexpected attribute ${name}`);
     }
   }
@@ -234,24 +259,50 @@ test("a note that starts with something it cannot draw has no snapshot", () => {
   }
 });
 
-test("frontmatter is a placeholder of the editor's reserved height", () => {
+test("frontmatter is the sheet's skeleton, and the text continues below it", () => {
   const html = snapshot(
     "---\ntitle: A\nstatus: open\ntags:\n  - a\n  - b\n---\n\n# Body\n\nText\n",
   );
   assert.match(
     html,
-    /<div class="hybrid-properties mw-frontmatter-placeholder" style="min-height:\d+(\.\d+)?px"><div class="properties metadata-container is-collapsed">/,
+    /<div class="hybrid-properties mw-frontmatter-placeholder"><div class="properties metadata-container mw-properties-skeleton">/,
   );
   assert.equal(html.includes("title: A"), false, "the YAML is not shown");
+  // One row per top-level key, named as the sheet names it.
+  assert.deepEqual(
+    [...html.matchAll(/metadata-property-key-input">([^<]*)</g)].map(
+      (m) => m[1],
+    ),
+    ["title", "status", "tags"],
+  );
   assert.deepEqual(text(html).slice(-4), ["Body", "", "Text", ""]);
   assertInert(html);
 });
 
-test("frontmatter whose sheet may be taller than reserved ends the screen", () => {
+test("a skeleton the browser lays out as the sheet is does not end the screen", () => {
+  // Long values wrap, lists of links and any number of items are drawn with
+  // the sheet's own classes, so they are as tall as the sheet at any width.
+  for (const yaml of [
+    `description: "${"word ".repeat(30)}"`,
+    'mocs:\n  - "[[One]]"\n  - "[[Two|Alias]]"',
+    `authors:\n${Array.from({ length: 12 }, (_, i) => `  - "Author ${i}"`).join("\n")}`,
+    "tags: [a, b, c, d, e, f, g]",
+    'link: "[[Some Note]]"\ncount: 3\ndone: true\nwhen: 2026-11-21',
+  ]) {
+    const html = snapshot(`---\n${yaml}\n---\n\n# Body\n\nText\n`);
+    assert.match(html, /mw-properties-skeleton/);
+    assert.deepEqual(text(html).slice(-4), ["Body", "", "Text", ""], yaml);
+  }
+});
+
+test("frontmatter whose sheet may differ from its skeleton ends the screen", () => {
   for (const yaml of [
     "title: A\nnested:\n  alpha: 1\n  beta: 2",
-    `title: ${"word ".repeat(30)}`,
-    "tags:\n  - a\n  - b\n  - c\n  - d\n  - e\n  - f",
+    "title: A\nnote: |\n  two\n  lines",
+    "title: A\ntitle: B",
+    "title: A: B",
+    "title: A\nkind: !!str B",
+    "title: A\nlist: [[nested]]",
   ]) {
     const html = snapshot(`---\n${yaml}\n---\n\n# Body\n\nText\n`);
     assert.match(html, /mw-frontmatter-placeholder/);
@@ -259,12 +310,40 @@ test("frontmatter whose sheet may be taller than reserved ends the screen", () =
   }
   // An empty sheet is another height again.
   assert.equal(text(snapshot("---\n---\n\n# Body\n")).includes("Body"), false);
+  // A list preview shows fewer chips than the skeleton draws.
+  const preview: Note = {
+    ...NOTE,
+    features: {
+      properties: { enabled: true, config: { listPreviewCount: 3 } },
+    },
+  };
+  assert.equal(
+    text(
+      snapshot("---\ntags: [a, b, c, d]\n---\n\n# Body\n", preview),
+    ).includes("Body"),
+    false,
+  );
 });
 
 test("a long frontmatter does not use up the first screen's lines", () => {
-  const yaml = Array.from({ length: 150 }, (_, i) => `key${i}: v`).join("\n");
+  const list = (name: string) =>
+    `${name}:\n${Array.from({ length: 40 }, (_, i) => `  - v${i}`).join("\n")}`;
+  const yaml = ["a", "b", "c"].map(list).join("\n");
   const html = snapshot(`---\n${yaml}\n---\n\n# Body\n\nText\n`);
   assert.deepEqual(text(html).slice(-4), ["Body", "", "Text", ""]);
+});
+
+test("a frontmatter with very many rows draws the first ones and ends the screen", () => {
+  const yaml = Array.from({ length: 150 }, (_, i) => `key${i}: v`).join("\n");
+  const html = snapshot(`---\n${yaml}\n---\n\n# Body\n\nText\n`);
+  assert.match(
+    html,
+    /min-height:\d+(\.\d+)?px/,
+    "the expanded estimate is its floor",
+  );
+  assert.equal(html.includes("key39"), true);
+  assert.equal(html.includes("key40"), false);
+  assert.equal(text(html).join("").includes("Body"), false);
 });
 
 test("frontmatter that Properties does not draw gives no snapshot", () => {
