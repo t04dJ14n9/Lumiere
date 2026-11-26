@@ -60,6 +60,7 @@ whole heading so its text and outline entry stay intact.
 - `marker-presence.ts`: whether a note holds `[^`, read once and then only
   where edits change it; `marker-presence.test.ts` covers it.
 - `preprocess.ts`: pure reference resolution and placeholder substitution.
+- `adjacent.ts` / `adjacent.test.ts`: whether a reference directly follows another (`[^30][^31]`), so it is drawn after a comma.
 - `render-references.ts`: pass reference registry and mounted-control lifetime.
 - `reference-widget.ts`: reference widget, its number, and the hover/focus
   preview control.

@@ -45,7 +45,7 @@ export class RenderedReferences {
     if (!items || items.length === 0) {
       return;
     }
-    for (const { id, note } of items) {
+    for (const { id, note, follows } of items) {
       const sup = pass.container.querySelector<HTMLElement>(
         `[data-mw-footnote="${id}"]`,
       );
@@ -56,6 +56,7 @@ export class RenderedReferences {
         render: this.render,
         navigate: () => this.navigate(note, pass),
         measure: pass.measure,
+        follows,
       });
       const cleanup = () => {
         stop();
