@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Markdown: the selection has rounded corners, and a selection over several
+  lines rounds only its outline. On a list line it starts at the bullet or
+  number, not in the indentation in front of it, and Vim's block cursor is
+  as tall as the selected row beside it (it was shorter on lines with
+  inline code).
 - Markdown: User Journey section titles and Event Modeling boxes show their
   labels before Allow; they were blank because the sanitizer dropped
   `<foreignObject>`.

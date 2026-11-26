@@ -6,6 +6,7 @@ import {
 import { BlockType, Direction, type EditorView } from "@codemirror/view";
 import type { CaretAppearance, CaretMode } from "./caret";
 import { caretCharacterPosition } from "./caret";
+import { rowBandAt } from "./selection-rows";
 
 export interface CaretGeometry {
   /** `end` is the one-pixel caret at the active end of a Vim visual selection. */
@@ -52,6 +53,27 @@ function halfLeading(view: EditorView, head: number, glyphHeight: number) {
   return Number.isFinite(lineHeight) && lineHeight > glyphHeight
     ? (lineHeight - glyphHeight) / 2
     : 0;
+}
+
+/**
+ * The caret's vertical extent in client pixels. The built-in editor's caret
+ * fills the whole line box, so it takes the selection's row band; where there
+ * is none (no rendered line), CodeMirror's glyph box plus the line's
+ * half-leading. The band differs from the glyph box plus half-leading on a
+ * row that inline code makes taller, where the caret would otherwise stop
+ * short of the tint around it.
+ */
+function caretBand(
+  view: EditorView,
+  head: number,
+  position: { top: number; bottom: number },
+): { top: number; bottom: number } {
+  const band = rowBandAt(view, head, position);
+  if (band) {
+    return band;
+  }
+  const leading = halfLeading(view, head, position.bottom - position.top);
+  return { top: position.top - leading, bottom: position.bottom + leading };
 }
 
 /** The start of the grapheme cluster that contains `position`. */
@@ -141,11 +163,8 @@ function mainCaret(
     width: appearance.width === "character" ? characterWidth : appearance.width,
     straddles: appearance.style === "line",
   });
-  // The built-in editor's caret fills the whole line box; CodeMirror's
-  // character rectangle is only the glyph box, so add the line's half-leading.
-  const leading = halfLeading(view, head, position.bottom - position.top);
-  const fullHeight =
-    (position.bottom - position.top + 2 * leading) / view.scaleY;
+  const band = caretBand(view, head, position);
+  const fullHeight = (band.bottom - band.top) / view.scaleY;
   const height =
     appearance.height === "character" ? fullHeight : appearance.height;
   const filled =
@@ -156,7 +175,7 @@ function mainCaret(
     part: "main",
     left: toScroller(view, frame, snapped.left),
     top:
-      (position.top - leading - frame.baseTop) / view.scaleY +
+      (band.top - frame.baseTop) / view.scaleY +
       view.scrollDOM.scrollTop +
       fullHeight -
       height,

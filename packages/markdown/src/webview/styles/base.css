@@ -205,6 +205,26 @@ body.vscode-high-contrast-light
 #app .cm-selectionBackground {
   background: var(--selection-tint-inactive);
 }
+/*
+ * Rounded selection; the radius matches SELECTION_RADIUS in
+ * editor/selection-shape.ts, which squares the corners a neighbouring row
+ * continues so a multi-line selection rounds only on its outline.
+ */
+#app .mw-selection-layer .cm-selectionBackground {
+  border-radius: 4px;
+}
+#app .mw-selection-layer .mw-selection-square-tl {
+  border-top-left-radius: 0;
+}
+#app .mw-selection-layer .mw-selection-square-tr {
+  border-top-right-radius: 0;
+}
+#app .mw-selection-layer .mw-selection-square-bl {
+  border-bottom-left-radius: 0;
+}
+#app .mw-selection-layer .mw-selection-square-br {
+  border-bottom-right-radius: 0;
+}
 #app .cm-editor.cm-focused .cm-selectionBackground,
 #app .cm-content ::selection {
   background: var(--selection-tint);
