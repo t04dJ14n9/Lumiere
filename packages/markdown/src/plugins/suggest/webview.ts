@@ -158,6 +158,7 @@ async function requestCompletions(
         query: trigger.query,
         ...(trigger.note === undefined ? {} : { note: trigger.note }),
         ...(trigger.bare && { bare: true }),
+        ...(trigger.destination && { destination: trigger.destination }),
         ...(trigger.kind === "block" &&
           trigger.note === undefined && { caret: context.pos }),
       },
@@ -254,8 +255,9 @@ function acceptWithTab(view: EditorView): boolean {
 
 /**
  * The edit for an accepted suggestion, as Obsidian makes it: Enter finishes
- * a link (`]]`) or adds the space after a tag; Tab only takes the text; with
- * an alias typed, the typed text stays and only the link is finished.
+ * a link (`]]`, or `)` inside a Markdown link) or adds the space after a tag;
+ * Tab only takes the text; with an alias typed, the typed text stays and only
+ * the link is finished.
  */
 function acceptance(
   view: EditorView,
@@ -264,6 +266,7 @@ function acceptance(
   trigger: SuggestionTrigger,
 ) {
   const tab = acceptingWithTab;
+  const closer = trigger.destination ? ")" : "]]";
   if (trigger.keepTyped) {
     return completionEdit(view.state, { from: range.to, to: range.to }, "", {
       close: !tab && trigger.closeLink,
@@ -274,6 +277,7 @@ function acceptance(
   }
   return completionEdit(view.state, range, item.insert, {
     close: item.replaceLink ? "replace" : trigger.closeLink,
+    closer,
     spaceAfter: trigger.spaceAfter === true,
   });
 }

@@ -44,8 +44,9 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 ## Files
 
 - `suggestions.ts`: plugin-owned completion trigger through `suggest/trigger`,
-  reading the text typed after `[[` with `src/markdown/link-trigger.ts`, which
-  Suggestions' native text editor half reads too.
+  reading the text typed after `[[`, or in the parentheses of a Markdown link
+  (`[text](`), with `src/markdown/link-trigger.ts`, which Suggestions' native
+  text editor half reads too.
 
 - `native-host.ts`: window-scoped native link registration through the host services `dialogs`, `settings` and `navigation`.
 - `manifest.ts`: link settings and insert/follow/side command contributions.
@@ -89,7 +90,8 @@ renderer adds `is-unresolved` to rendered links whose path is in it.
 
 ## Services, events and settings
 
-Listens to `suggest/trigger` for its own completion syntax.
+Listens to `suggest/trigger` for its own completion syntax: wikilinks and
+Markdown link destinations.
 
 Webview injects `editor`, `livePreview`, `commands` and `rpc`; host injects `rpc`,
 the host services `dialogs`, `settings` and `navigation`, `vault` and `resources`. Webview provides `links` for focused-editor

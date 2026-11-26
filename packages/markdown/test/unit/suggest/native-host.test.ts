@@ -257,3 +257,75 @@ test("[[paper.pdf# offers nothing without pdfOutlines", async () => {
   assert.deepEqual(await complete("[[paper.pdf#"), []);
   await root.dispose();
 });
+
+// The layout of a vault whose project folders each hold a progress.md.
+const projects = {
+  "projects/Project Alpha/overview.md": "# Overview\n",
+  "projects/Project Alpha/progress.md":
+    "# Progress\n\n## Entries\n\n### First\n",
+  "projects/Another/progress.md": "# Progress\n\n## Entries\n\n### Other\n",
+};
+const overview = uriOf("projects/Project Alpha/overview.md");
+
+test("[text](progress.md#Entr offers the headings of the progress.md beside the note", async () => {
+  const { root, complete } = await start({ extra: projects });
+  const before = "[progress](progress.md#Entr";
+  assert.deepEqual(await complete(before, { uri: overview }), [
+    {
+      label: "Entries",
+      detail: "H2 · projects/Project Alpha/progress.md",
+      insert: "Entries)",
+      replaceFrom: before.length - "Entr".length,
+      absorbs: ")",
+    },
+  ]);
+  // The owner's wikilink in the same place.
+  assert.deepEqual(
+    (await complete("[[progress.md#Entr", { uri: overview })).map(
+      (item) => item.insert,
+    ),
+    ["Entries]]"],
+  );
+  await root.dispose();
+});
+
+test("[text]( offers the notes, written as a Markdown link writes a destination, and closes with )", async () => {
+  const { root, complete } = await start();
+  const items = await complete("see [x](Targ");
+  assert.deepEqual(items[0], {
+    label: "Target Note",
+    detail: "Target Note.md",
+    insert: "Target%20Note.md)",
+    replaceFrom: 8,
+    absorbs: ")",
+  });
+  // Typed encoded, and with a heading: only the fragment is replaced.
+  assert.deepEqual(await complete("[x](Target%20Note.md#Sec"), [
+    {
+      label: "Second Section",
+      detail: "H2 · Target Note.md",
+      insert: "Second%20Section)",
+      replaceFrom: 21,
+      absorbs: ")",
+    },
+  ]);
+  assert.deepEqual(
+    (await complete("[x](Folder/De")).map((item) => item.insert),
+    ["Folder/Deep.md)"],
+  );
+  await root.dispose();
+});
+
+test("no list for a web link, a finished destination or text that is not a link", async () => {
+  const { root, complete } = await start();
+  for (const before of [
+    "[x](https://exa",
+    "[x](mailto:me@",
+    "[x](Target%20Note.md) and (Targ",
+    "[x](Target Note",
+    "plain (Targ",
+  ]) {
+    assert.deepEqual(await complete(before), [], before);
+  }
+  await root.dispose();
+});

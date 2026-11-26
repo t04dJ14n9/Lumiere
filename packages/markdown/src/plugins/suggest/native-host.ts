@@ -85,15 +85,25 @@ function suggestionIndexes(ctx: Context) {
 }
 
 /**
- * Accepting works as in the Lumiere editor: the link is finished with `]]`,
- * reusing one that follows the caret; an alias being typed stays and only
- * the link is finished; a Markdown link replaces the whole `[[…`.
+ * Accepting works as in the Lumiere editor: the link is finished with `]]`
+ * (`)` inside a Markdown link), reusing one that follows the caret; an alias
+ * being typed stays and only the link is finished; a Markdown link replaces
+ * the whole `[[…`.
  */
 function completion(
   item: Suggestion,
   where: { trigger: LinkTrigger; before: string },
 ): TextCompletion {
   const { trigger, before } = where;
+  if (trigger.destination) {
+    return {
+      label: item.label,
+      detail: item.detail,
+      insert: `${item.insert})`,
+      replaceFrom: trigger.from,
+      absorbs: ")",
+    };
+  }
   const entry = { label: item.label, detail: item.detail, absorbs: "]]" };
   if (trigger.keepTyped) {
     return { ...entry, insert: "]]", replaceFrom: trigger.from };

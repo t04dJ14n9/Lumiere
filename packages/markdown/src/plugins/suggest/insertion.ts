@@ -10,6 +10,8 @@ export function materialize(options: {
   /** `^` was typed without `#`: the link's `#` comes with the id. */
   bare?: boolean;
   useWikilinks: boolean;
+  /** Typed inside `[text](`: only the destination, or the fragment, is inserted. */
+  destination?: "relative" | "root";
 }): Suggestion {
   const { vault, source, entry, globalBlock, useWikilinks } = options;
   const base = {
@@ -17,6 +19,13 @@ export function materialize(options: {
     detail: entry.detail,
     ...blockIdOf(entry, source),
   };
+  if (options.destination) {
+    const isRoot = options.destination === "root";
+    return {
+      ...base,
+      insert: destinationText(vault, entry, { source, isRoot }),
+    };
+  }
   if (!useWikilinks) {
     return {
       ...base,
@@ -71,19 +80,48 @@ function markdownLink(
   entry: Candidate,
   source: string,
 ): string {
+  const path = markdownPath(vault, entry.value, { source, isRoot: false });
+  const fragment = fragmentOf(entry.value);
+  const label = entry.label.replace(/([\\[\]])/g, "\\$1");
+  return `[${label}](${path}${fragment === undefined ? "" : `#${fragment}`})`;
+}
+
+/**
+ * What a link needs inside its parentheses when its text is written already:
+ * a note's or file's path, or, once `#` is typed (and `^` for a block), the
+ * heading, block id or PDF page. A path is relative to the note, as new
+ * Markdown links are written, or from the vault's root after a typed `/`.
+ */
+function destinationText(
+  vault: VaultIndex,
+  entry: Candidate,
+  where: { source: string; isRoot: boolean },
+): string {
   const value = entry.value;
+  if (value.kind === "block") {
+    return encodeDestination(value.id);
+  }
+  return fragmentOf(value) ?? markdownPath(vault, value, where);
+}
+
+function markdownPath(
+  vault: VaultIndex,
+  value: Value,
+  where: { source: string; isRoot: boolean },
+): string {
   let path: string;
   if (value.kind === "literal") {
     path = /\.[^/]+$/.test(value.text) ? value.text : `${value.text}.md`;
+  } else if (where.isRoot) {
+    path = `/${value.target.path}`;
   } else {
-    path = relativeLinkPath(folderOf(source), value.target.path, (candidate) =>
-      hasFileIgnoringCase(vault, candidate),
+    path = relativeLinkPath(
+      folderOf(where.source),
+      value.target.path,
+      (candidate) => hasFileIgnoringCase(vault, candidate),
     );
   }
-  const destination =
-    path.split("/").map(encodeDestination).join("/") + fragment(value);
-  const label = entry.label.replace(/([\\[\]])/g, "\\$1");
-  return `[${label}](${destination})`;
+  return path.split("/").map(encodeDestination).join("/");
 }
 /**
  * Whether the vault has a file at `path` in any case: links resolve without
@@ -110,14 +148,15 @@ function lowerCasePaths(files: readonly VaultFile[]): Set<string> {
   }
   return set;
 }
-function fragment(value: Value): string {
+/** The encoded text after `#` for a heading, block or PDF page; none for a note. */
+function fragmentOf(value: Value): string | undefined {
   if (value.kind === "heading") {
-    return `#${encodeDestination(value.text)}`;
+    return encodeDestination(value.text);
   }
   if (value.kind === "pdfSection") {
-    return `#page=${value.page}`;
+    return `page=${value.page}`;
   }
-  return value.kind === "block" ? `#^${encodeDestination(value.id)}` : "";
+  return value.kind === "block" ? `^${encodeDestination(value.id)}` : undefined;
 }
 function encodeDestination(value: string): string {
   return encodeURIComponent(value).replace(

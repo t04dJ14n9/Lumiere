@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: typing a Markdown link's destination (`[text](`, `![alt](`) lists
+  notes and files as `[[` does, `[text](progress.md#` lists that file's
+  headings and `[text](progress.md#^` its blocks, and `[text](#` this note's
+  headings, in the Lumiere editor and in VS Code's text editor. The file is
+  the one the link opens, so with a `progress.md` in every project folder the
+  headings are those of the one beside the note. A heading is written
+  percent-encoded as a converted `[[Note#Heading]]` is, and `)` finishes the
+  link (an existing one is reused). Nothing opens for `https:` or `mailto:`
+  links, or, in the Lumiere editor, in code.
+- Markdown: a note still shows in the `[[` list after its extension is typed
+  (`[[progress.md`), where it used to vanish at the `.`.
+
 ## 0.1.39 (2026-11-26)
 
 - Markdown: Lumiere is the default editor for `*.md` and `*.markdown`, so
