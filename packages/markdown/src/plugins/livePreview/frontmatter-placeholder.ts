@@ -1,13 +1,14 @@
-import { WidgetType } from "@codemirror/view";
+import { WidgetType, type EditorView } from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { headerParts } from "../../markdown/properties/header-parts";
 import {
   frontmatterPlaceholderHeight,
   FRONTMATTER_PLACEHOLDER_CLASS,
-  frontmatterPlaceholderMarkup,
+  frontmatterPlaceholder,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
+import { rememberSheetHeight } from "../../markdown/properties/sheet-height-memory";
 import { blockRenderers } from "./registry";
 import type { BlockRenderer } from "./api";
 
@@ -52,43 +53,63 @@ export function propertiesRendererRegistered(state: EditorState): boolean {
  * configures. Heading + body enter the viewport from core Live Preview alone;
  * Properties replaces this widget when its renderer registers.
  */
-export function frontmatterPlaceholderRenderer(): BlockRenderer {
+export function frontmatterPlaceholderRenderer(
+  isCollapsed = false,
+): BlockRenderer {
   return {
     kind: "frontmatter-placeholder",
     nodes: ["Frontmatter"],
     editing: "widget",
     match: (node, state) =>
       !propertiesRendererRegistered(state) && completeFrontmatter(state, node),
-    widget: (block) => new FrontmatterPlaceholder(block.source),
+    widget: (block) => new FrontmatterPlaceholder(block.source, isCollapsed),
   };
 }
 
 class FrontmatterPlaceholder extends WidgetType {
-  constructor(private readonly source: string) {
+  constructor(
+    private readonly source: string,
+    /** The note's Properties are stored collapsed: the heading alone. */
+    private readonly isCollapsed: boolean,
+  ) {
     super();
   }
 
   override eq(other: FrontmatterPlaceholder): boolean {
-    return this.source === other.source;
+    return (
+      this.source === other.source && this.isCollapsed === other.isCollapsed
+    );
   }
 
-  override toDOM(): HTMLElement {
+  override toDOM(view: EditorView): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = FRONTMATTER_PLACEHOLDER_CLASS;
     wrapper.setAttribute("aria-hidden", "true");
-    // Mirror collapsed Properties chrome so CSS already on the editor sheet
-    // paints a familiar bar; the real PropertyWidget replaces this on configure.
-    // minHeight still tracks the expanded estimate so body layout stays put.
-    wrapper.innerHTML = frontmatterPlaceholderMarkup();
-    const reserve = this.estimatedHeight;
-    if (reserve > 0 && wrapper.style) {
-      wrapper.style.minHeight = `${reserve}px`;
+    // The sheet's rows, muted, in the sheet's own classes: the real
+    // PropertyWidget replaces it on configure without moving anything. A
+    // skeleton that cannot be exact keeps the expanded estimate as a floor.
+    const { markup, minHeight, isExact } = frontmatterPlaceholder(
+      this.source,
+      this.isCollapsed,
+    );
+    wrapper.innerHTML = markup;
+    if (minHeight > 0 && wrapper.style) {
+      wrapper.style.minHeight = `${minHeight}px`;
+    }
+    if (isExact && !this.isCollapsed) {
+      // The sheet will be this tall: its widget starts from it (widget.ts).
+      view.requestMeasure({
+        key: wrapper,
+        read: () =>
+          wrapper.isConnected ? wrapper.getBoundingClientRect().height : 0,
+        write: (height) => rememberSheetHeight(this.source, height),
+      });
     }
     return wrapper;
   }
 
   override get estimatedHeight(): number {
-    return frontmatterPlaceholderHeight(this.source);
+    return frontmatterPlaceholderHeight(this.source, this.isCollapsed);
   }
 
   override ignoreEvent(): boolean {

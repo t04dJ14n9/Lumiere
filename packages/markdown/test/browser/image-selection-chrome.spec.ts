@@ -52,8 +52,9 @@ test("selected |200 image has no caret bar below the card", async ({
   expect(info.minHeight).toBe("");
   // Shell no longer keeps the |W| estimatedHeight reserve under the card.
   expect(info.shellH).toBeLessThanOrEqual(info.imgH + 8);
-  // Caret layer hidden while selected (geometry may still exist).
-  expect(info.caretVisible).toBe("hidden");
+  // No caret shows while an image is selected: the layer is hidden, or holds
+  // none (a caret in a block widget is not drawn at all: caret-geometry.ts).
+  expect(["hidden", "missing"]).toContain(info.caretVisible);
 });
 
 test("images (standalone and inside tables) and Mermaid diagrams open in larger window only from their Inspect button", async ({

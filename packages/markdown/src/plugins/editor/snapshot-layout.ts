@@ -20,6 +20,10 @@ export interface SnapshotLayout {
   readonly tabSize: number;
   /** Whether Properties draws the frontmatter (a sheet the snapshot reserves). */
   readonly properties: boolean;
+  /** Properties' list preview: above 0 a list shows fewer chips than the skeleton. */
+  readonly listPreviewCount: number;
+  /** Whether the note's Properties are stored collapsed: the sheet is its heading alone. */
+  readonly isCollapsed: boolean;
   /** Whether tags are drawn as tags (otherwise they stay plain text). */
   readonly tags: boolean;
 }
@@ -48,6 +52,32 @@ const defaultsOn = new Map(
 
 type Feature = { enabled: boolean; config: Record<string, unknown> };
 
+/** Which of the settled editor's three gutter columns its settings give. */
+export interface SettledGutters {
+  readonly lineNumbers: boolean;
+  readonly gitGutter: boolean;
+  readonly folding: boolean;
+}
+
+/**
+ * The gutter columns the editor will have once its features have loaded
+ * (the line numbers, the change bars, the fold markers), from the features
+ * it was sent. `defaults` says whether a feature with no setting is on.
+ */
+export function settledGutters(
+  features: NoteSettings["features"],
+  defaults = true,
+): SettledGutters {
+  const isOn = (id: string) =>
+    features?.[id]?.enabled ?? (defaults && (defaultsOn.get(id) ?? false));
+  return {
+    lineNumbers:
+      isOn("lineNumbers") && features?.lineNumbers?.config.style !== "off",
+    gitGutter: isOn("gitGutter"),
+    folding: isOn("folding"),
+  };
+}
+
 /** Whether line numbers, change bars and fold markers will all be there. */
 function hasSettledGutters(feature: (id: string) => Feature | undefined) {
   const isOn = (id: string) =>
@@ -70,6 +100,7 @@ function hasSettledGutters(feature: (id: string) => Feature | undefined) {
 export function snapshotLayout(
   note: Presentation,
   platform: Platform,
+  isCollapsed = false,
 ): SnapshotLayout | undefined {
   const editor = editorConfig.parse(note.editor ?? {});
   const feature = (id: string) => note.features?.[id];
@@ -91,11 +122,23 @@ export function snapshotLayout(
   const display = feature("properties")?.config.display ?? "visible";
   const properties = isOn("properties") && display === "visible";
   const tags = isOn("tags");
+  const listPreviewCount = Number(
+    feature("properties")?.config.listPreviewCount ?? 0,
+  );
   return {
-    key: JSON.stringify({ vars, tabSize: editor.tabSize, properties, tags }),
+    key: JSON.stringify({
+      vars,
+      tabSize: editor.tabSize,
+      properties,
+      listPreviewCount,
+      isCollapsed,
+      tags,
+    }),
     vars,
     tabSize: editor.tabSize,
     properties,
+    listPreviewCount,
+    isCollapsed,
     tags,
   };
 }

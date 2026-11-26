@@ -234,6 +234,7 @@ export class BrowserHost {
         source: this.document.uri,
         preset,
         mode,
+        propertiesCollapsed: this.propertiesCollapsed,
       };
     });
     host.handle(jumpProtocol, "record", () => true);

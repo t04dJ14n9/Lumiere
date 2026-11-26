@@ -2,6 +2,23 @@
 
 ## 0.1.0 (unreleased)
 
+- Changed: opening a note is calmer. The first-paint snapshot and Live
+  Preview's placeholder draw the Properties sheet's own rows (a line scan of
+  the frontmatter, no YAML parse), muted, in the sheet's classes, so the
+  browser lays them out as it lays out the sheet; the snapshot continues
+  below it for any sheet the scan reads exactly, and fades into the editor.
+  With no snapshot the gutters' width is reserved until each gutter mounts,
+  blocks that features still to load will draw (callouts, tables, math,
+  Mermaid, embeds) are empty shells of their estimated height rather than
+  raw Markdown, and the sheet, those blocks and the line numbers reveal once
+  (100 ms, from partly visible) while the note opens. The caret is not drawn
+  inside a block widget, focused or not, and the sheet starts from the height
+  its skeleton measured, which stops the line numbers below it moving when it
+  mounts. Properties switched off no longer leaves the placeholder in place of
+  the frontmatter. A note whose Properties are stored collapsed is drawn as the
+  heading alone by the snapshot and the placeholder: the host reads the flag
+  from the workspace's storage and repeats it in the `ready` answer
+  (`propertiesCollapsed`), and a snapshot drawn for the other state is dropped.
 - Fixed: Markdown links had no suggestions. Typing inside `[text](` now lists
   notes and files (`![alt](` too), `[text](progress.md#` that file's headings,
   `[text](progress.md#^` its blocks, and `[text](#` this note's headings,

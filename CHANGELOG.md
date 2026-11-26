@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Markdown: a note opens calmly. The Properties sheet's rows (names and
+  values, in the sheet's own layout, muted) are on screen from the first
+  frame, not a lone "Properties" label over a blank block, and the text
+  below does not move when the sheet replaces them, also for long values,
+  lists and links. The first-paint snapshot fades into the editor instead
+  of cutting to it. Without a snapshot (a restored view, a search match,
+  Source mode) the width of the line numbers, change bars and fold markers
+  is kept from the first frame, so the text no longer shifts right when
+  they arrive; callouts, tables, math, Mermaid and embeds hold their
+  place instead of showing raw Markdown; and what loads late comes in once
+  over 100 ms, from partly visible, only while the note opens (never when
+  scrolling; not at all with reduced motion). No bar the height of the
+  properties stands at the top of the note, and the line numbers below the
+  sheet no longer shift by a pixel or two when it mounts. A note whose
+  Properties are stored collapsed opens with the heading alone, in the
+  first-paint snapshot too, so its text does not jump up when the editor
+  takes over. Nothing waits for any of this: opening is as fast as before.
 - Markdown: typing a Markdown link's destination (`[text](`, `![alt](`) lists
   notes and files as `[[` does, `[text](progress.md#` lists that file's
   headings and `[text](progress.md#^` its blocks, and `[text](#` this note's

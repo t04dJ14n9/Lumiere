@@ -12,6 +12,7 @@ import { Endpoint, RpcError } from "../../shared/rpc/endpoint";
 import { config as editorConfig } from "./manifest";
 import { protocol } from "./protocol";
 import { platformOf } from "./font";
+import { isPropertiesCollapsed } from "../../shared/properties-collapse";
 import { webviewSnapshot } from "./snapshot";
 import { opensAtTop } from "./snapshot-layout";
 import { webviewHTML } from "./webview-html";
@@ -26,7 +27,7 @@ interface PanelOptions {
 export function createPanel(
   shell: PanelShell,
   documents: Documents,
-  host: Pick<HostServices, "settings" | "clipboard" | "workspace">,
+  host: Pick<HostServices, "settings" | "clipboard" | "workspace" | "storage">,
   options: PanelOptions,
 ): EditorPanel {
   const { onClose, onState, configure, rank = () => 0 } = options;
@@ -126,7 +127,7 @@ function registerTrustReload(
 function pageSnapshot(
   shell: PanelShell,
   session: Pick<EditorPanel["session"], "text">,
-  host: Pick<HostServices, "settings">,
+  host: Pick<HostServices, "settings" | "storage">,
   logger: Logger,
 ): string {
   try {
@@ -138,7 +139,12 @@ function pageSnapshot(
       return "";
     }
     const note = host.settings.forNote(shell.document);
-    return webviewSnapshot(session.text, note, platformOf(hostPlatform()));
+    return webviewSnapshot(
+      session.text,
+      note,
+      platformOf(hostPlatform()),
+      isPropertiesCollapsed(host.storage, uri),
+    );
   } catch (error) {
     logger.warn("First-paint snapshot failed", error);
     return "";
@@ -155,13 +161,41 @@ function hostPlatform(): string {
   return runtime?.platform ?? "";
 }
 
+/** What the webview is told when it asks for the note: its text, settings and opening state. */
+function readyAnswer(
+  shell: PanelShell,
+  session: EditorPanel["session"],
+  host: Pick<HostServices, "settings" | "storage">,
+) {
+  const config = host.settings.forNote(shell.document);
+  return {
+    text: session.text,
+    version: session.version,
+    clientID: shell.id,
+    trusted: shell.trusted,
+    source: shell.document.uri,
+    ...config,
+    debugLogging: config.debugLogging ?? false,
+    features: config.features ?? {},
+    editor: editorConfig.parse(config.editor ?? {}),
+    // The snapshot was drawn for the stored state; a difference drops it.
+    propertiesCollapsed: isPropertiesCollapsed(
+      host.storage,
+      shell.document.uri,
+    ),
+    ...(shell.openingSelection
+      ? { openingSelection: shell.openingSelection }
+      : {}),
+  };
+}
+
 function registerSessionHandshake(
   owned: RootContext,
   options: {
     shell: PanelShell;
     session: EditorPanel["session"];
     rpc: Endpoint;
-    host: Pick<HostServices, "settings" | "clipboard">;
+    host: Pick<HostServices, "settings" | "clipboard" | "storage">;
   },
 ): void {
   const { shell, session, rpc, host } = options;
@@ -192,21 +226,7 @@ function registerSessionHandshake(
         throw new RpcError("Cancelled", "Renderer replaced");
       }
       detach = session.attach(shell.id, rpc);
-      const config = host.settings.forNote(shell.document);
-      const init = {
-        text: session.text,
-        version: session.version,
-        clientID: shell.id,
-        trusted: shell.trusted,
-        source: shell.document.uri,
-        ...config,
-        debugLogging: config.debugLogging ?? false,
-        features: config.features ?? {},
-        editor: editorConfig.parse(config.editor ?? {}),
-        ...(shell.openingSelection
-          ? { openingSelection: shell.openingSelection }
-          : {}),
-      };
+      const init = readyAnswer(shell, session, host);
       // After the ready payload is built: deferred panel hosts (blame, search,
       // suggest, …) may start without delaying the webview's first paint.
       owned.emit("editor/session-ready");

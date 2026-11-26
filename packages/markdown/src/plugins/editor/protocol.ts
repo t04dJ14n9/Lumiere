@@ -68,6 +68,8 @@ export const protocol = defineProtocol("editor", {
         editor: editorConfig.default(editorConfig.parse({})),
         preset: Schema.union(["minimal", "obsidian"]),
         mode: Schema.union(["source", "livePreview"]),
+        /** The note's Properties are stored collapsed (shared/properties-collapse.ts). */
+        propertiesCollapsed: Schema.boolean().optional(),
         openingSelection: Schema.object({
           anchor: offset,
           head: offset,

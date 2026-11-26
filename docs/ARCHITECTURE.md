@@ -542,8 +542,12 @@ The path from "open `Note.md`" to an editable note, and where its time goes:
    the text, version, settings and the list of active features, then starts the
    deferred panel hosts.
 5. The webview builds the CodeMirror state, runs the first Live Preview pass and
-   replaces the snapshot without moving it; feature phases start a task after
-   that paint.
+   replaces the snapshot without moving it (a crossfade, 100 ms, that nothing
+   waits for); feature phases start a task after that paint. Without a snapshot
+   the page is marked `is-opening` until the features have loaded: the Properties
+   sheet is drawn as its skeleton, the gutters' width and the places of callouts,
+   tables, math, diagrams and embeds are held, and what loads late is revealed
+   once, from partly visible (`webview/opening.ts`, `webview/styles/opening.css`).
 
 Opening does not wait for vault indexing, and feature code is fetched lazily, so
 by design neither the vault's size nor the number of plugins sits on the path to

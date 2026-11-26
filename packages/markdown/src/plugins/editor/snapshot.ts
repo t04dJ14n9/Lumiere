@@ -2,9 +2,8 @@ import type { SyntaxNode } from "@lezer/common";
 import { markdownParser } from "../../markdown/dialect/parser";
 import { escape } from "../../markdown/html/helpers";
 import {
-  frontmatterPlaceholderHeight,
   FRONTMATTER_PLACEHOLDER_CLASS,
-  frontmatterPlaceholderMarkup,
+  frontmatterPlaceholder,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
 import { headerParts } from "../../markdown/properties/header-parts";
@@ -34,15 +33,12 @@ import { row, Source, type Lines } from "./snapshot-inline";
  * placeholder) with Live Preview's own classes, and ends before the first
  * block it cannot draw exactly: tables, callouts, images, embeds, math,
  * tags, footnotes, HTML. The editor mounts under it (webview/snapshot.ts).
+ * The Properties sheet is drawn as its skeleton (the sheet's rows, muted).
  */
 
 /** The first screen is at most this many lines and characters of source. */
 const MAX_LINES = 80;
 const MAX_CHARS = 8192;
-/** Frontmatter values the placeholder's height still fits (see `isEstimable`). */
-const MAX_YAML_LINE = 80;
-const MAX_LIST_ITEMS = 5;
-
 /**
  * The three gutter columns of the settled editor, empty: the text starts
  * where it does once line numbers, change bars and fold markers have mounted.
@@ -56,37 +52,11 @@ const GUTTERS =
   "</div>";
 
 /**
- * Whether the sheet is about as tall as the placeholder's estimate: a few
- * short one-line values and short lists. A nested map, a long value that
- * wraps or an empty sheet is taller than the estimate, which only floors it.
- */
-function isEstimable(yaml: string): boolean {
-  let rows = 0;
-  let items = 0;
-  for (const line of yaml.split("\n")) {
-    if (!line.trim()) {
-      continue;
-    }
-    if (
-      line.length > MAX_YAML_LINE ||
-      (/^\s/.test(line) && !/^\s*-\s/.test(line))
-    ) {
-      return false;
-    }
-    if (/^\s*-\s/.test(line)) {
-      items++;
-    } else {
-      rows++;
-    }
-  }
-  return rows > 0 && items <= MAX_LIST_ITEMS;
-}
-
-/**
  * A complete fence is a Properties sheet. Properties draws it later, so the
- * snapshot reserves the height the editor reserves until the sheet mounts.
- * Returns false after drawing it when the real sheet may be taller: the
- * lines below would then move at the swap, so the snapshot ends here.
+ * snapshot draws its skeleton, which the browser lays out as it will the
+ * sheet. Returns false after drawing it when the skeleton may differ from
+ * the sheet (a nested value, a long list, YAML it cannot read): the lines
+ * below would then move at the swap, so the snapshot ends here.
  */
 function frontmatter(
   src: Source,
@@ -98,14 +68,16 @@ function frontmatter(
   if (!layout.properties || !header || node.to < header.end - 1) {
     return false;
   }
-  const height = frontmatterPlaceholderHeight(src.text);
-  lines[0] =
-    `<div class="${FRONTMATTER_PLACEHOLDER_CLASS}" style="min-height:${height}px">` +
-    `${frontmatterPlaceholderMarkup()}</div>`;
+  const { markup, minHeight, isExact } = frontmatterPlaceholder(
+    src.text,
+    layout.isCollapsed,
+  );
+  const style = minHeight > 0 ? ` style="min-height:${minHeight}px"` : "";
+  lines[0] = `<div class="${FRONTMATTER_PLACEHOLDER_CLASS}"${style}>${markup}</div>`;
   for (let at = 1; at <= src.line(node.to); at++) {
     lines[at] = "";
   }
-  return isEstimable(header.body);
+  return isExact && layout.listPreviewCount === 0;
 }
 
 /** Draws one top-level block into `lines`; false when it cannot. */
@@ -239,15 +211,17 @@ function snapshotHTML(
 /**
  * The snapshot for a note with these settings, or "" when the setting is off
  * or the settings are ones the snapshot cannot match (see `snapshotLayout`).
+ * `isCollapsed`: the note's Properties are stored collapsed.
  */
 export function webviewSnapshot(
   source: string,
   note: NoteSettings,
   platform: Platform,
+  isCollapsed = false,
 ): string {
   if (!editorConfig.parse(note.editor ?? {}).firstPaintSnapshot) {
     return "";
   }
-  const layout = snapshotLayout(note, platform);
+  const layout = snapshotLayout(note, platform, isCollapsed);
   return (layout && snapshotHTML(source, layout)) ?? "";
 }
