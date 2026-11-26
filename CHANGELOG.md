@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.39 (2026-11-26)
 
 - Markdown: Lumiere is the default editor for `*.md` and `*.markdown`, so
   notes open in it with nothing to set up. `"workbench.editorAssociations":
