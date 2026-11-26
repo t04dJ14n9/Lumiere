@@ -63,17 +63,53 @@ jobs:
           echo "${heading} → pre-release: ${pre_release}"
           echo "pre-release=${pre_release}" >> "${GITHUB_OUTPUT}"
 
-  browser:
-    name: browser
+  # The same shards as CI's browser job (ci.yml), in parallel.
+  browser-shard:
+    name: browser (${{ matrix.suite }})
     needs: tag
     runs-on: ${{ fromJSON(vars.RELEASE_RUNNER || '["ubuntu-latest"]') }}
-    timeout-minutes: 35
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { suite: markdown 1/3, package: markdown, args: --shard=1/3 }
+          - { suite: markdown 2/3, package: markdown, args: --shard=2/3 }
+          - { suite: markdown 3/3, package: markdown, args: --shard=3/3 }
+          - {
+              suite: pdf 1/2,
+              package: pdf,
+              args: --project=parallel --shard=1/2,
+            }
+          - {
+              suite: pdf 2/2,
+              package: pdf,
+              args: --project=parallel --shard=2/2,
+            }
+          # The timing specs run one at a time on a runner of their own.
+          - {
+              suite: pdf timing,
+              package: pdf,
+              args: --project=timing --no-deps,
+            }
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: ./.github/actions/setup
       - uses: ./.github/actions/playwright
-      - name: pnpm test:browser
-        run: pnpm test:browser
+      - name: pnpm test:browser (${{ matrix.suite }})
+        run: pnpm --filter "@workshop/${{ matrix.package }}" test:browser ${{ matrix.args }}
+
+  # The merge gate and the release wait on this one job: it passes only when
+  # every shard above passed.
+  browser:
+    name: browser
+    needs: browser-shard
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every browser shard passed
+        run: test "${{ needs.browser-shard.result }}" = success
 
   quality:
     name: quality
