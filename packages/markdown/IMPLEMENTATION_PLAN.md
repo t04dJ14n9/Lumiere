@@ -9636,10 +9636,12 @@ Design, in the order the problems were fixed:
   opacity transition, was the "gutter flicker"; the first is fixed, the others
   are not flicker.
 - Crossfade (`webview/snapshot.ts`): the snapshot fades out over the editor for
-  100 ms, from the moment it used to be removed. The editor beneath is complete
-  and takes input at once, the snapshot never takes pointer events, and a
-  `transitionend` listener plus a timer remove it; with reduced motion it goes
-  at once.
+  100 ms, starting when the features have loaded: two frames earlier than the
+  removal it replaces (the double `requestAnimationFrame` is gone), so the
+  element now outlives that removal by up to about 100 ms, as a fading,
+  `pointer-events: none` cover over an editor that is complete and takes input
+  at once. Nothing waits for it. A `transitionend` listener plus a timer remove
+  it; with reduced motion it goes at once.
 - `is-opening` (`webview/opening.ts`): set on the page's parent when the editor
   mounts without a covering snapshot, cleared 100 ms after the features have
   loaded (3 s at the latest). `webview/styles/opening.css` animates only under
@@ -9673,8 +9675,11 @@ Limits. Inline decorations that change a line's text (links, tags, footnote
 marks, task boxes, inline math and images) still come in place without a
 reveal; the text of the line reflows when a wikilink's brackets go. Images and
 diagrams that load later do not fade in on their own load; they are revealed
-with their block. A note whose Properties are stored collapsed still paints one
-expanded frame (the flag reaches the webview only after the sheet exists). The
+with their block. A note whose Properties are stored collapsed is drawn expanded: with a snapshot
+that is the whole cover, then the text below jumps up by the difference when the
+sheet appears (the flag reaches the webview only after the sheet exists; before,
+the snapshot ended below the sheet only for the few notes the old estimate
+covered, and this is now far more notes). The
 reserve assumes a left-to-right page. The skeleton draws no row icons (a
 16 px box), so they appear with the sheet.
 
@@ -9711,3 +9716,15 @@ element of the note. They are now properties of the strip's own `::before`
 123 ms against 128, and the paired marks are as above. (Without the reveal
 animations it had been 150 ms against 164, so they were a quarter of it and the
 gutter block the rest.)
+
+Exactness, measured. Over the 309 notes of the owner's vault that have
+frontmatter, the scan reads 296 exactly (the old size rule covered 33 of 307);
+for every one of them a differential check against `renderProperties` found the
+same rows, controls, shown values and chips (`test/unit/properties/skeleton-parity.ts`,
+which also runs in the unit suite over an awkward-YAML table and the
+repository's own fixtures and documents). A review of the scan found
+two mistakes the vault does not contain, both fixed and pinned by that table: a
+value that starts with a bracket is a flow list in YAML (`- [[Note]]`,
+`[unclosed`), and only a comment may follow a quoted value (`"x" y`,
+`'a' 'b'`). The 13 it does not read are `authors:` lists of more
+than 50 names.

@@ -146,13 +146,24 @@
   width: 7px;
 }
 
-/* The block widgets and the line numbers that arrive late come in once. */
+/*
+ * The block widgets and the line numbers that arrive late come in once: the
+ * blocks whose features are awaited (shared/first-view.ts), not an HTML block,
+ * which was never late.
+ */
 @keyframes mw-reveal-block {
   from {
     opacity: 0.4;
   }
 }
-.is-opening .hybrid-block:not(.hybrid-deferred),
+:is(#app.is-opening, #app .is-opening)
+  :is(
+    .hybrid-callout,
+    .hybrid-table,
+    .hybrid-math,
+    .hybrid-diagram,
+    .hybrid-embed
+  ):not(.hybrid-deferred),
 .is-opening .cm-gutter.cm-lineNumbers {
   animation: mw-reveal-block var(--mw-reveal-ms) ease-out;
 }

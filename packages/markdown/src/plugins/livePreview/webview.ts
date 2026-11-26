@@ -25,6 +25,7 @@ import {
 } from "./blocks";
 import { blockDecorations, blockViewportSupport } from "./viewport-decorations";
 import { documentTree, documentTreeParser } from "./document-tree";
+import { forgetSheetHeights } from "../../markdown/properties/sheet-height-memory";
 import { endPendingBlocks, pendingBlocks } from "./pending-blocks";
 import { hybridInline } from "./inline-plugin";
 import { headingDragStart } from "./heading-drag";
@@ -167,6 +168,7 @@ function registerPendingBlocks(ctx: Context, kinds: readonly string[]): void {
   }
   ctx.effect(() => ctx.editor.extend(pendingBlocks(kinds), { slot: "base" }));
   ctx.on("editor/featuresLoaded", () => {
+    forgetSheetHeights();
     const effect = endPendingBlocks();
     if (!ctx.editor.dispatchEffect?.(effect)) {
       ctx.editor.view.dispatch({ effects: effect });

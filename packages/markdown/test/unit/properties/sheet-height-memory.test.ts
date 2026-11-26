@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  forgetSheetHeights,
   rememberedSheetHeight,
   rememberSheetHeight,
 } from "../../../src/markdown/properties/sheet-height-memory";
@@ -43,4 +44,11 @@ test("only the latest few heights are kept, and a height of nothing is not one",
   }
   assert.equal(rememberedSheetHeight("---\nk0: 1\n---\n"), undefined);
   assert.equal(rememberedSheetHeight("---\nk19: 1\n---\n"), 119);
+});
+
+test("the opening's heights are forgotten when it is over", () => {
+  rememberSheetHeight(SOURCE, 321);
+  assert.equal(rememberedSheetHeight(SOURCE), 321);
+  forgetSheetHeights();
+  assert.equal(rememberedSheetHeight(SOURCE), undefined);
 });

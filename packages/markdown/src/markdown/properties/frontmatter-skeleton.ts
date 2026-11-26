@@ -52,7 +52,8 @@ type Scalar = string | number | boolean | null | typeof UNREADABLE;
 
 const KEY_LINE = /^(.+?):(?:\s+(.*?))?\s*$/;
 const LIST_ITEM = /^\s*-(?:\s+(.*?))?\s*$/;
-const INDICATOR_START = /^[&*!|>%@`?{]|^[-:](?:\s|$)/;
+/** What a plain scalar cannot start with (flow brackets and commas included: `[a` is no string). */
+const INDICATOR_START = /^[&*!|>%@`?[\]{},]|^[-:](?:\s|$)/;
 
 function entryOf(line: string): Entry | undefined {
   const match = KEY_LINE.exec(line);
@@ -67,7 +68,11 @@ function entryOf(line: string): Entry | undefined {
   };
 }
 
-/** Drops ` # comment` after a value; a `#` inside quotes stays. */
+/**
+ * Drops ` # comment` after a value; a `#` inside quotes stays. After a closing
+ * quote only a comment may follow, as YAML reads it: anything else (`"a" b`)
+ * leaves the text whole for `quotedScalar` to refuse.
+ */
 function stripComment(text: string): string {
   if (text.startsWith("#")) {
     return "";
@@ -75,7 +80,10 @@ function stripComment(text: string): string {
   const quote = /^(["'])/.exec(text)?.[1];
   if (quote) {
     const end = closingQuote(text, quote);
-    return end < 0 ? text : text.slice(0, end + 1);
+    const rest = text.slice(end + 1);
+    return end < 0 || (rest.trim() !== "" && !/^\s+#/.test(rest))
+      ? text
+      : text.slice(0, end + 1);
   }
   return text.replace(/\s+#.*$/, "").trim();
 }

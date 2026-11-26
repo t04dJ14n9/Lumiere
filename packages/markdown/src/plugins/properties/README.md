@@ -122,9 +122,11 @@ Settings are `lumiere.markdown.properties.display`
 ## Limits and differences from Obsidian
 
 The skeleton draws the sheet expanded, so a note whose Properties are stored
-collapsed still paints one expanded frame, and a value the scan cannot read
-(a nested map, a block scalar, an anchor, a list of over 50 items, a sheet of
-over 40 rows) is drawn as one line, which ends the snapshot there.
+collapsed shows it expanded until the sheet mounts and then jumps up by the
+difference (the flag reaches the webview only after Properties has loaded). A
+value the scan cannot read (a nested map, a block scalar, an anchor, a list of
+over 50 items, a sheet of over 40 rows) is drawn as one line, which ends the
+snapshot there.
 Native TextDocument save and undo are authoritative. Menus use the editor menu
 service; structured clipboard uses the `obsidian/properties` payload. Type
 preferences follow the root supplied by the vault service. Source mode shows YAML; there, unlike Obsidian, the gutter and Fold All do

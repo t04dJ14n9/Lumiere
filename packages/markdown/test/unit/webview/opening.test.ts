@@ -10,6 +10,7 @@ import {
   REVEAL_MS,
 } from "../../../src/webview/opening";
 import { FADE_MS, settleSnapshot } from "../../../src/webview/snapshot";
+import { BLOCK_RENDERER_KINDS } from "../../../src/shared/first-view";
 import {
   settledGutters,
   snapshotLayout,
@@ -100,7 +101,7 @@ test("reveals animate only while the note is opening, and never without motion",
     if (!names.startsWith("@keyframes") && !names.startsWith("*")) {
       assert.match(
         names,
-        /^\.is-opening\b/,
+        /^(?:\.is-opening\b|:is\(#app\.is-opening)/,
         "animations sit under .is-opening",
       );
     }
@@ -311,4 +312,18 @@ test("the gutter reserve's widths are properties of its own strip, and its tests
       assert.match(test!, /^>/, `:has(${test}) looks at children only`);
     }
   }
+});
+
+test("the block reveal names the blocks of the awaited features, and no others", () => {
+  const rule = /:is\(\s*\.hybrid-callout[^{]*\{/.exec(css)![0];
+  const named = [...rule.matchAll(/\.hybrid-([a-z]+)/g)].map(
+    (match) => match[1],
+  );
+  const awaited = Object.values(BLOCK_RENDERER_KINDS)
+    .filter((kind) => kind !== "properties")
+    .map((kind) => kind.toLowerCase());
+  assert.deepEqual(
+    [...new Set(named)].filter((name) => name !== "deferred").sort(),
+    awaited.sort(),
+  );
 });
