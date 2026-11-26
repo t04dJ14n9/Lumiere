@@ -22,6 +22,8 @@ export interface SnapshotLayout {
   readonly properties: boolean;
   /** Properties' list preview: above 0 a list shows fewer chips than the skeleton. */
   readonly listPreviewCount: number;
+  /** Whether the note's Properties are stored collapsed: the sheet is its heading alone. */
+  readonly isCollapsed: boolean;
   /** Whether tags are drawn as tags (otherwise they stay plain text). */
   readonly tags: boolean;
 }
@@ -98,6 +100,7 @@ function hasSettledGutters(feature: (id: string) => Feature | undefined) {
 export function snapshotLayout(
   note: Presentation,
   platform: Platform,
+  isCollapsed = false,
 ): SnapshotLayout | undefined {
   const editor = editorConfig.parse(note.editor ?? {});
   const feature = (id: string) => note.features?.[id];
@@ -128,12 +131,14 @@ export function snapshotLayout(
       tabSize: editor.tabSize,
       properties,
       listPreviewCount,
+      isCollapsed,
       tags,
     }),
     vars,
     tabSize: editor.tabSize,
     properties,
     listPreviewCount,
+    isCollapsed,
     tags,
   };
 }

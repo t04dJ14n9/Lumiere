@@ -16,6 +16,8 @@ const LEAVING_CLASS = "is-leaving";
 
 type Opening = Pick<NoteSettings, "preset" | "mode" | "editor" | "features"> & {
   openingSelection?: { anchor: number; head: number; topLine?: number };
+  /** The note's Properties are stored collapsed (the `ready` answer's say). */
+  propertiesCollapsed?: boolean | undefined;
 };
 
 /**
@@ -23,13 +25,18 @@ type Opening = Pick<NoteSettings, "preset" | "mode" | "editor" | "features"> & {
  * note opens somewhere other than its top (a search match; a restored view
  * is the page's loader's to see) or with settings other than the host
  * assumed when it built the snapshot (an Obsidian vault's own settings reach
- * the host after the page is set).
+ * the host after the page is set), or a Properties sheet collapsed or
+ * expanded otherwise than the host drew it (the layout key says which).
  */
 export function snapshotMatches(snapshot: HTMLElement, note: Opening): boolean {
   if (!opensAtTop(note.openingSelection)) {
     return false;
   }
-  const layout = snapshotLayout(note, platformOf(navigator.platform));
+  const layout = snapshotLayout(
+    note,
+    platformOf(navigator.platform),
+    note.propertiesCollapsed === true,
+  );
   return layout?.key === snapshot.dataset.layout;
 }
 

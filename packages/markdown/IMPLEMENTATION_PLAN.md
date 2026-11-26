@@ -9675,11 +9675,19 @@ Limits. Inline decorations that change a line's text (links, tags, footnote
 marks, task boxes, inline math and images) still come in place without a
 reveal; the text of the line reflows when a wikilink's brackets go. Images and
 diagrams that load later do not fade in on their own load; they are revealed
-with their block. A note whose Properties are stored collapsed is drawn expanded: with a snapshot
-that is the whole cover, then the text below jumps up by the difference when the
-sheet appears (the flag reaches the webview only after the sheet exists; before,
-the snapshot ended below the sheet only for the few notes the old estimate
-covered, and this is now far more notes). The
+with their block. (A note whose Properties are stored collapsed was first drawn expanded,
+which with the snapshot continuing below an exact sheet would have been a new
+jump for every such note. The host now reads the flag from the workspace's
+storage, as the Properties host does (`shared/properties-collapse.ts` holds the
+key and the read): the snapshot draws the heading alone and the text below it,
+the snapshot's layout key carries the flag, the `ready` answer repeats it
+(`propertiesCollapsed`, optional, so older answers read as expanded) and the
+no-snapshot placeholder draws the same. If the state changes between the page
+and the answer the key differs and the snapshot is dropped at once. A probe of
+the three cases, with the real editor beneath: collapsed on both sides, the
+snapshot's lines are where the editor puts them to 0.5 px; expanded on both
+sides, likewise; collapsed then expanded, the snapshot is dropped. The no-snapshot
+first frame is the heading alone at the collapsed sheet's measured 61 px.) The
 reserve assumes a left-to-right page. The skeleton draws no row icons (a
 16 px box), so they appear with the sheet.
 

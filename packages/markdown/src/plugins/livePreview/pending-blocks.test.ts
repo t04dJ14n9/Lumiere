@@ -153,3 +153,29 @@ test("frontmatter is held by the Properties skeleton, and by nothing once Proper
   }).update({ effects: endPendingBlocks() }).state;
   assert.deepEqual(kindsOf(ended), []);
 });
+
+test("a collapsed note's placeholder is the heading alone, with the collapsed height", () => {
+  const doc = "---\ntitle: A\nstatus: open\n---\n\n# Heading\n";
+  const widgetOf = (isPropertiesCollapsed: boolean) => {
+    const state = EditorState.create({
+      doc,
+      extensions: [
+        documentTree,
+        blockIndex,
+        pendingBlocks(["properties"], { isPropertiesCollapsed }),
+      ],
+    });
+    const [block] = state.field(blockIndex);
+    return state.facet(blockRenderers)[0]!.widget(block!);
+  };
+  const collapsed = widgetOf(true);
+  const expanded = widgetOf(false);
+  assert.equal(collapsed.estimatedHeight, 69);
+  assert.ok(expanded.estimatedHeight > 69);
+  assert.equal(
+    collapsed.eq(expanded),
+    false,
+    "the state is part of what it draws",
+  );
+  assert.equal(collapsed.eq(widgetOf(true)), true);
+});

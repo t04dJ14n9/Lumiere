@@ -121,9 +121,12 @@ Settings are `lumiere.markdown.properties.display`
 
 ## Limits and differences from Obsidian
 
-The skeleton draws the sheet expanded, so a note whose Properties are stored
-collapsed shows it expanded until the sheet mounts and then jumps up by the
-difference (the flag reaches the webview only after Properties has loaded). A
+A note whose Properties are stored collapsed (`collapse-store.ts`) gets the
+heading alone: the host reads the flag from the workspace's storage
+(`shared/properties-collapse.ts`) when it builds the snapshot and says it in
+the `ready` answer (`propertiesCollapsed`), the snapshot's layout key carries
+it, and Live Preview's placeholder draws the same. A snapshot drawn for the
+other state than the answer names is dropped at once, never kept to jump. A
 value the scan cannot read (a nested map, a block scalar, an anchor, a list of
 over 50 items, a sheet of over 40 rows) is drawn as one line, which ends the
 snapshot there.

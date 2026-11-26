@@ -15,8 +15,10 @@
   over 100 ms, from partly visible, only while the note opens (never when
   scrolling; not at all with reduced motion). No bar the height of the
   properties stands at the top of the note, and the line numbers below the
-  sheet no longer shift by a pixel or two when it mounts. Nothing waits for
-  any of this: opening is as fast as before.
+  sheet no longer shift by a pixel or two when it mounts. A note whose
+  Properties are stored collapsed opens with the heading alone, in the
+  first-paint snapshot too, so its text does not jump up when the editor
+  takes over. Nothing waits for any of this: opening is as fast as before.
 
 ## 0.1.39 (2026-11-26)
 

@@ -9,7 +9,10 @@ import {
   skeletonSheet,
   type SkeletonValue,
 } from "../../../src/markdown/properties/frontmatter-skeleton";
-import { frontmatterPlaceholder } from "../../../src/markdown/properties/frontmatter-placeholder";
+import {
+  frontmatterPlaceholder,
+  frontmatterPlaceholderHeight,
+} from "../../../src/markdown/properties/frontmatter-placeholder";
 import { renderProperties } from "../../../src/plugins/properties/sheet-html";
 import { propertyFlairIcon } from "../../../src/webview/ui/icons";
 
@@ -204,4 +207,46 @@ test("the skeleton never reaches the YAML runtime", () => {
     false,
   );
   assert.ok(seen.size > 3);
+});
+
+test("a collapsed skeleton is the sheet's heading alone, whatever the rows hold", () => {
+  const sheet = skeletonSheet("title: A\nnested:\n  a: 1");
+  const markup = skeletonMarkup(sheet, { isCollapsed: true });
+  assert.match(
+    markup,
+    /^<div class="properties metadata-container is-collapsed mw-properties-skeleton">/,
+  );
+  assert.equal(
+    /property-row|metadata-content|Add property/.test(markup),
+    false,
+  );
+  assert.ok(markup.includes(propertyFlairIcon("collapse")));
+  // As the sheet's own collapsed heading.
+  const real = renderProperties(
+    "---\ntitle: A\n---\n",
+    {},
+    { collapsed: true },
+  );
+  assert.ok(real.includes('metadata-container is-collapsed"'));
+  assert.ok(
+    real.includes(`<span class="metadata-properties-title">Properties</span>`),
+  );
+  assert.ok(
+    markup.includes(
+      `<span class="metadata-properties-title">Properties</span>`,
+    ),
+  );
+  // Expanded is the default.
+  assert.equal(skeletonMarkup(sheet).includes("is-collapsed"), false);
+});
+
+test("a collapsed placeholder reserves no more than its heading, and an expanded one as before", () => {
+  const source = "---\ntitle: A\nn:\n  a: 1\n---\n";
+  const collapsed = frontmatterPlaceholder(source, true);
+  assert.equal(collapsed.minHeight, 0);
+  assert.match(collapsed.markup, /is-collapsed/);
+  assert.equal(frontmatterPlaceholderHeight(source, true), 69);
+  const expanded = frontmatterPlaceholder(source);
+  assert.equal(expanded.minHeight, frontmatterPlaceholderHeight(source));
+  assert.ok(expanded.minHeight > 69);
 });

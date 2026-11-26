@@ -116,6 +116,7 @@ function mountPlugins(
     root.plugin(livePreviewWebview, {
       mode: init.mode,
       opening: expectedBlockKinds(init.features),
+      propertiesCollapsed: init.propertiesCollapsed,
     });
   }
   return editor;

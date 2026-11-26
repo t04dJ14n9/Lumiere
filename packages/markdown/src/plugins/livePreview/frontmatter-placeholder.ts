@@ -53,24 +53,32 @@ export function propertiesRendererRegistered(state: EditorState): boolean {
  * configures. Heading + body enter the viewport from core Live Preview alone;
  * Properties replaces this widget when its renderer registers.
  */
-export function frontmatterPlaceholderRenderer(): BlockRenderer {
+export function frontmatterPlaceholderRenderer(
+  isCollapsed = false,
+): BlockRenderer {
   return {
     kind: "frontmatter-placeholder",
     nodes: ["Frontmatter"],
     editing: "widget",
     match: (node, state) =>
       !propertiesRendererRegistered(state) && completeFrontmatter(state, node),
-    widget: (block) => new FrontmatterPlaceholder(block.source),
+    widget: (block) => new FrontmatterPlaceholder(block.source, isCollapsed),
   };
 }
 
 class FrontmatterPlaceholder extends WidgetType {
-  constructor(private readonly source: string) {
+  constructor(
+    private readonly source: string,
+    /** The note's Properties are stored collapsed: the heading alone. */
+    private readonly isCollapsed: boolean,
+  ) {
     super();
   }
 
   override eq(other: FrontmatterPlaceholder): boolean {
-    return this.source === other.source;
+    return (
+      this.source === other.source && this.isCollapsed === other.isCollapsed
+    );
   }
 
   override toDOM(view: EditorView): HTMLElement {
@@ -80,12 +88,15 @@ class FrontmatterPlaceholder extends WidgetType {
     // The sheet's rows, muted, in the sheet's own classes: the real
     // PropertyWidget replaces it on configure without moving anything. A
     // skeleton that cannot be exact keeps the expanded estimate as a floor.
-    const { markup, minHeight, isExact } = frontmatterPlaceholder(this.source);
+    const { markup, minHeight, isExact } = frontmatterPlaceholder(
+      this.source,
+      this.isCollapsed,
+    );
     wrapper.innerHTML = markup;
     if (minHeight > 0 && wrapper.style) {
       wrapper.style.minHeight = `${minHeight}px`;
     }
-    if (isExact) {
+    if (isExact && !this.isCollapsed) {
       // The sheet will be this tall: its widget starts from it (widget.ts).
       view.requestMeasure({
         key: wrapper,
@@ -98,7 +109,7 @@ class FrontmatterPlaceholder extends WidgetType {
   }
 
   override get estimatedHeight(): number {
-    return frontmatterPlaceholderHeight(this.source);
+    return frontmatterPlaceholderHeight(this.source, this.isCollapsed);
   }
 
   override ignoreEvent(): boolean {

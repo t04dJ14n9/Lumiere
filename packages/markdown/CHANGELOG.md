@@ -15,7 +15,10 @@
   inside a block widget, focused or not, and the sheet starts from the height
   its skeleton measured, which stops the line numbers below it moving when it
   mounts. Properties switched off no longer leaves the placeholder in place of
-  the frontmatter.
+  the frontmatter. A note whose Properties are stored collapsed is drawn as the
+  heading alone by the snapshot and the placeholder: the host reads the flag
+  from the workspace's storage and repeats it in the `ready` answer
+  (`propertiesCollapsed`), and a snapshot drawn for the other state is dropped.
 
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.

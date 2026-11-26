@@ -1,3 +1,8 @@
+import {
+  COLLAPSED_NOTES_KEY,
+  collapsedNotes,
+  isPropertiesCollapsed,
+} from "../../shared/properties-collapse";
 import type { PreferenceStorage } from "./type-store";
 
 /**
@@ -10,27 +15,19 @@ export class PropertyCollapseStore {
   private readonly listeners = new Set<
     (note: string, collapsed: boolean) => void
   >();
-  private readonly key = "markdownPropertiesCollapsedNotes";
 
   constructor(private readonly storage: PreferenceStorage) {}
 
-  private notes(): Record<string, true> {
-    const value = this.storage.get<unknown>(this.key, {});
-    return typeof value === "object" && value !== null
-      ? (value as Record<string, true>)
-      : {};
-  }
-
   read(note: string): boolean {
-    return this.notes()[note] === true;
+    return isPropertiesCollapsed(this.storage, note);
   }
 
   set(note: string, collapsed: boolean): Promise<void> {
     const update = this.pending.then(async () => {
-      const rest = { ...this.notes() };
+      const rest = { ...collapsedNotes(this.storage) };
       delete rest[note];
       await this.storage.update(
-        this.key,
+        COLLAPSED_NOTES_KEY,
         collapsed ? { ...rest, [note]: true } : rest,
       );
       for (const listener of this.listeners) {

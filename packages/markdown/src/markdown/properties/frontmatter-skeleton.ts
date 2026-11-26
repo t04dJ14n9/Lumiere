@@ -363,13 +363,27 @@ function valueMarkup(value: SkeletonValue): string {
 const rowMarkup = (row: SkeletonRow) =>
   `<div class="property-row metadata-property"><div class="metadata-property-key"><span class="metadata-property-icon"><span class="property-icon"></span></span><span class="property-key metadata-property-key-input">${escape(row.key)}</span></div><div class="metadata-property-value">${valueMarkup(row.value)}</div></div>`;
 
-/** The sheet's own structure and classes, inert: no handlers, no focus. */
-export function skeletonMarkup(sheet: SkeletonSheet): string {
-  return (
-    '<div class="properties metadata-container mw-properties-skeleton">' +
+/**
+ * The sheet's own structure and classes, inert: no handlers, no focus. A
+ * collapsed sheet is its heading alone, as the sheet draws it (its rows are
+ * hidden), and its height does not depend on them.
+ */
+export function skeletonMarkup(
+  sheet: SkeletonSheet,
+  { isCollapsed = false }: { isCollapsed?: boolean } = {},
+): string {
+  const heading =
     '<div class="metadata-properties-heading">' +
     `<span class="metadata-collapse-indicator collapse-indicator collapse-icon">${SKELETON_CHEVRON}</span>` +
-    `<span class="metadata-properties-title">${escape(t("Properties"))}</span></div>` +
+    `<span class="metadata-properties-title">${escape(t("Properties"))}</span></div>`;
+  const state = isCollapsed ? " is-collapsed" : "";
+  const container = `<div class="properties metadata-container${state} mw-properties-skeleton">`;
+  if (isCollapsed) {
+    return `${container}${heading}</div>`;
+  }
+  return (
+    container +
+    heading +
     '<div class="metadata-content"><div class="metadata-properties">' +
     sheet.rows.map(rowMarkup).join("") +
     `</div><span class="metadata-add-button text-icon-button">${SKELETON_PLUS} ${escape(t("Add property"))}</span></div></div>`

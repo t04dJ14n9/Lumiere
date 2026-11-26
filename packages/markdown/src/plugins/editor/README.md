@@ -97,7 +97,10 @@ the sheet's own rows, muted, from a line scan of the frontmatter, in the
 sheet's classes (`markdown/properties/frontmatter-skeleton.ts`), so the browser
 lays out wrapping values, chips and clamped paragraphs as it will lay out the
 sheet, at any width, and the text below it is drawn too. The editor mounts beneath it
-(`webview/snapshot.ts`); once every feature has loaded the snapshot fades out
+(`webview/snapshot.ts`); a note whose Properties are stored collapsed gets the
+sheet's heading alone, from the flag the host reads from the workspace's
+storage and repeats in the `ready` answer, so the two cannot differ unless the
+state changed in between (then the layout key drops the snapshot); once every feature has loaded the snapshot fades out
 over the editor (100 ms; at once with reduced motion). The editor beneath is
 complete and takes input at once, the snapshot never takes pointer events, and
 nothing waits for the fade; the swap moves nothing (`test/browser/first-paint-snapshot.spec.ts`

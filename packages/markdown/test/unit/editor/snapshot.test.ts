@@ -442,3 +442,73 @@ test("the editor keeps the snapshot only for the layout it was built for", () =>
   );
   assert.equal(snapshotMatches(element, { ...init, mode: "source" }), false);
 });
+
+test("a collapsed sheet is its heading alone, with the text drawn below it", () => {
+  const source =
+    "---\ntitle: A\nstatus: open\ntags:\n  - one\n---\n\n# Body\n\nText\n";
+  const collapsed = webviewSnapshot(source, NOTE, "mac", true);
+  assert.match(
+    collapsed,
+    /<div class="properties metadata-container is-collapsed mw-properties-skeleton"><div class="metadata-properties-heading">/,
+  );
+  assert.equal(collapsed.includes("property-row"), false);
+  assert.equal(collapsed.includes("metadata-content"), false);
+  assert.deepEqual(text(collapsed).slice(-4), ["Body", "", "Text", ""]);
+  assertInert(collapsed);
+  // No floor: the heading alone is as tall as the collapsed sheet, at any width.
+  assert.equal(collapsed.includes("min-height"), false);
+  // Rows the scan cannot read are hidden under a collapsed sheet, but the
+  // sheet may then be an error: the screen still ends there.
+  const nested = "---\ntitle: A\nn:\n  a: 1\n---\n\n# Body\n";
+  assert.equal(
+    text(webviewSnapshot(nested, NOTE, "mac", true)).includes("Body"),
+    false,
+  );
+  // Not collapsed, the same note draws its rows.
+  assert.equal(
+    (webviewSnapshot(source, NOTE, "mac").match(/class="property-row/g) ?? [])
+      .length,
+    3,
+  );
+});
+
+test("the layout key says whether the sheet was drawn collapsed, so a mismatch drops the snapshot", () => {
+  const expanded = snapshotLayout(NOTE, "mac")!;
+  const collapsed = snapshotLayout(NOTE, "mac", true)!;
+  assert.notEqual(expanded.key, collapsed.key);
+  const init = { ...NOTE, editor: editorConfig.parse({}) };
+  const drawnCollapsed = {
+    dataset: { layout: collapsed.key },
+  } as unknown as HTMLElement;
+  const drawnExpanded = {
+    dataset: { layout: expanded.key },
+  } as unknown as HTMLElement;
+  // The host drew it as the `ready` answer says.
+  assert.equal(
+    snapshotMatches(drawnCollapsed, { ...init, propertiesCollapsed: true }),
+    true,
+  );
+  assert.equal(snapshotMatches(drawnExpanded, init), true);
+  assert.equal(
+    snapshotMatches(drawnExpanded, { ...init, propertiesCollapsed: false }),
+    true,
+  );
+  // The state changed between the page and the answer: the snapshot goes.
+  assert.equal(snapshotMatches(drawnCollapsed, init), false);
+  assert.equal(
+    snapshotMatches(drawnExpanded, { ...init, propertiesCollapsed: true }),
+    false,
+  );
+  // The webview's layout is built from the same flag as the host's.
+  assert.equal(
+    snapshotLayout(init, "mac", true)!.key,
+    JSON.stringify({
+      vars: collapsed.vars,
+      tabSize: collapsed.tabSize,
+      properties: true,
+      listPreviewCount: 0,
+      isCollapsed: true,
+      tags: true,
+    }),
+  );
+});

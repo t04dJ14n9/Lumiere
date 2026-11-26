@@ -68,7 +68,10 @@ function frontmatter(
   if (!layout.properties || !header || node.to < header.end - 1) {
     return false;
   }
-  const { markup, minHeight, isExact } = frontmatterPlaceholder(src.text);
+  const { markup, minHeight, isExact } = frontmatterPlaceholder(
+    src.text,
+    layout.isCollapsed,
+  );
   const style = minHeight > 0 ? ` style="min-height:${minHeight}px"` : "";
   lines[0] = `<div class="${FRONTMATTER_PLACEHOLDER_CLASS}"${style}>${markup}</div>`;
   for (let at = 1; at <= src.line(node.to); at++) {
@@ -208,15 +211,17 @@ function snapshotHTML(
 /**
  * The snapshot for a note with these settings, or "" when the setting is off
  * or the settings are ones the snapshot cannot match (see `snapshotLayout`).
+ * `isCollapsed`: the note's Properties are stored collapsed.
  */
 export function webviewSnapshot(
   source: string,
   note: NoteSettings,
   platform: Platform,
+  isCollapsed = false,
 ): string {
   if (!editorConfig.parse(note.editor ?? {}).firstPaintSnapshot) {
     return "";
   }
-  const layout = snapshotLayout(note, platform);
+  const layout = snapshotLayout(note, platform, isCollapsed);
   return (layout && snapshotHTML(source, layout)) ?? "";
 }

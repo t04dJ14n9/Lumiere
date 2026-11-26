@@ -49,6 +49,8 @@ export const livePreviewWebview: Plugin<{
   mode: "source" | "livePreview";
   /** Kinds of block whose renderers are still to load: their places are held until they do. */
   opening?: readonly string[];
+  /** The note's Properties are stored collapsed: the placeholder is the heading alone. */
+  propertiesCollapsed?: boolean | undefined;
 }> = {
   name: "livePreview",
   inject: { required: ["editor", "commands", "render"], optional: ["rpc"] },
@@ -61,7 +63,9 @@ export const livePreviewWebview: Plugin<{
       ctx.provide("livePreview", service);
       registerRenderInvalidation(ctx, service);
       registerFallbackBlocks(ctx);
-      registerPendingBlocks(ctx, config.opening ?? []);
+      registerPendingBlocks(ctx, config.opening ?? [], {
+        isPropertiesCollapsed: config.propertiesCollapsed === true,
+      });
       registerModeCommand(ctx, service);
     });
   },
@@ -162,11 +166,17 @@ function registerFallbackBlocks(ctx: Context): void {
  * the note shows no raw source for them and nothing below them jumps; once
  * every feature has loaded, a block whose renderer never came shows its source.
  */
-function registerPendingBlocks(ctx: Context, kinds: readonly string[]): void {
+function registerPendingBlocks(
+  ctx: Context,
+  kinds: readonly string[],
+  options: { isPropertiesCollapsed: boolean },
+): void {
   if (kinds.length === 0) {
     return;
   }
-  ctx.effect(() => ctx.editor.extend(pendingBlocks(kinds), { slot: "base" }));
+  ctx.effect(() =>
+    ctx.editor.extend(pendingBlocks(kinds, options), { slot: "base" }),
+  );
   ctx.on("editor/featuresLoaded", () => {
     forgetSheetHeights();
     const effect = endPendingBlocks();

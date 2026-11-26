@@ -108,10 +108,17 @@ function standIn(kind: string): BlockRenderer {
  * until their features load: the Properties skeleton for frontmatter
  * ("properties"), an empty shell for the others.
  */
-export function pendingBlocks(kinds: readonly string[]) {
+export function pendingBlocks(
+  kinds: readonly string[],
+  { isPropertiesCollapsed = false }: { isPropertiesCollapsed?: boolean } = {},
+) {
   const held = kinds.flatMap((kind) => {
     if (kind === "properties") {
-      return [blockRenderers.of(frontmatterPlaceholderRenderer())];
+      return [
+        blockRenderers.of(
+          frontmatterPlaceholderRenderer(isPropertiesCollapsed),
+        ),
+      ];
     }
     return kind in MATCHES ? [blockRenderers.of(standIn(kind))] : [];
   });
