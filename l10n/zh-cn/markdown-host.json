@@ -64,6 +64,8 @@
   "Export needs Marp for VS Code.": "导出需要 Marp for VS Code。",
   "Failed": "失败",
   "Find or create a note…": "查找或新建笔记…",
+  "Go back in note": "在笔记中后退",
+  "Go forward in note": "在笔记中前进",
   "HEAD ({0})": "HEAD ({0})",
   "IDE context copied": "已复制 IDE 上下文",
   "IDE context copied (Codex temp FS unavailable)": "已复制 IDE 上下文（Codex 临时文件系统不可用）",

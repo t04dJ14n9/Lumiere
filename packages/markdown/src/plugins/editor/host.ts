@@ -35,7 +35,7 @@ export const editorHost: Plugin<EditorHostConfig> = {
       "activeEditor",
       "workspace",
     ],
-    optional: ["vaults", "pdfOutlines"],
+    optional: ["vaults", "pdfOutlines", "views"],
   },
   provides: ["editors", "selections", "editorActions"],
   apply(ctx, config) {
@@ -198,7 +198,7 @@ function provideEditorServices(
   const selections = new SelectionSnapshots((id) => panels.get(id), ctx);
   ctx.provide("selections", selections);
   registerEditorActions(ctx, editors, selections);
-  registerJumpHistory(ctx, editors);
+  registerJumpHistory(ctx, editors, ctx.views);
   registerGoToLine(ctx, editors);
   return editors;
 }

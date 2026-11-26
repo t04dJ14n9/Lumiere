@@ -333,6 +333,7 @@ version and interaction generation, and advances only after layout acknowledgmen
 - `jump-history.ts`: bounded source-location stack and edit mapping.
 - `jump-protocol.ts`: validated capture, record and replay messages.
 - `jump-host.ts`: per-panel ownership, command/context registration and replay.
+- `jump-status.ts` / `jump-status.test.ts`: the back and forward arrows on the status bar, shown while a note is the active tab and clickable only where there is a jump to replay (the title-bar arrows show only then).
 - `jump-webview.ts`: geometric capture, queued-edit mapping and replay guard.
 - `layout.ts`: bounded measured-layout acknowledgment.
 
