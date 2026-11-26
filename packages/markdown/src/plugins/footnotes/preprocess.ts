@@ -7,6 +7,8 @@ export interface FootnoteReplacement {
   to: number;
   id: string;
   note: Footnote;
+  /** It starts where the previous reference ends (`[^30][^31]`). */
+  follows: boolean;
 }
 
 /** Resolve against the owning note, then substitute opaque placeholders before HTML rendering. */
@@ -40,7 +42,14 @@ export function prepareFootnotes(
         return false;
       }
       const id = `fn-${nonce}-${replacements.length}`;
-      replacements.push({ from: node.from, to: node.to, id, note });
+      const previous = replacements[replacements.length - 1];
+      replacements.push({
+        from: node.from,
+        to: node.to,
+        id,
+        note,
+        follows: previous?.to === node.from,
+      });
       return false;
     },
   });

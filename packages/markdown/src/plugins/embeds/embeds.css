@@ -48,14 +48,17 @@
 .image-inspector .media-area {
   flex: 1;
   min-height: 0;
+  display: flex;
   overflow: auto;
   padding: 12px 24px;
-  text-align: center;
 }
-.image-inspector .media-area:not(.actual-size) {
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* Safe centering: auto margins centre the drawing while it is smaller than
+ * the area, at fit and after zooming, and keep it at the start edge once it
+ * is larger, so every part stays reachable by scrolling (centring with
+ * justify-content would cut off the left and top of a large drawing). */
+.image-inspector .media-area > img,
+.image-inspector .media-area > svg {
+  margin: auto;
 }
 .image-inspector img {
   max-width: 100%;
@@ -69,12 +72,18 @@
   flex-shrink: 0;
 }
 .image-inspector .actual-size {
-  text-align: left;
   cursor: grab;
 }
 .image-inspector .actual-size img {
   max-width: none;
   max-height: none;
+}
+/* A drag that starts on a label selects its text (diagram-dialog.ts), so the
+ * pointer says so: an I-beam over labels, the grab hand elsewhere. */
+.image-inspector .media-area svg text,
+.image-inspector .media-area svg foreignObject,
+.image-inspector .media-area svg foreignObject * {
+  cursor: text;
 }
 .image-inspector .panning {
   cursor: grabbing;
