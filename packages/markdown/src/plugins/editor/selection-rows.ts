@@ -300,10 +300,33 @@ export function rowBandAt(
   const pad = spacing(line);
   const top = box.top + pad.top;
   const bottom = box.bottom - pad.bottom;
-  // A line under two glyphs tall has one row: its box is the band, and the
-  // caret need not measure the line's text on every move.
-  if (bottom - top < 2 * (glyph.bottom - glyph.top)) {
+  // A line one row tall: its box is the band, and the caret need not measure
+  // the line's text on every move. Judged by the line's line-height, not the
+  // glyph: a CJK fallback glyph can be as tall as the line-height, and two
+  // wrapped rows (a table cell's) then measured "under two glyphs tall".
+  if (
+    isSingleRow(bottom - top, cssLineHeight(line), glyph.bottom - glyph.top)
+  ) {
     return { top, bottom };
   }
   return rowOf(visualRows(view, block), glyph);
+}
+
+/** The line's computed line-height in pixels, or undefined for `normal`. */
+function cssLineHeight(line: HTMLElement): number | undefined {
+  const value = parseFloat(getComputedStyle(line).lineHeight);
+  return Number.isFinite(value) && value > 0 ? value : undefined;
+}
+
+/**
+ * Whether a line box this tall holds one visual row. A second row adds a whole
+ * line-height, so anything under one and a half rows is one; without a CSS
+ * line-height the glyph's height stands in for it.
+ */
+export function isSingleRow(
+  lineBoxHeight: number,
+  lineHeight: number | undefined,
+  glyphHeight: number,
+): boolean {
+  return lineBoxHeight < 1.5 * (lineHeight ?? glyphHeight);
 }

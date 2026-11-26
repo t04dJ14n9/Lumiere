@@ -36,3 +36,17 @@ test("footnote preprocessing leaves missing references intact and reuses repeate
     ["fn-test-0", "fn-test-1"],
   );
 });
+
+test("a reference directly after another is marked to follow it", () => {
+  const line = "Claim[^a][^b] and later[^c].";
+  const document = Text.of([line, "", "[^a]: one", "[^b]: two", "[^c]: three"]);
+  const result = prepareFootnotes(line, document, 0, "nonce");
+  assert.deepEqual(
+    result.replacements.map(({ note, follows }) => [note.label, follows]),
+    [
+      ["a", false],
+      ["b", true],
+      ["c", false],
+    ],
+  );
+});

@@ -4,6 +4,7 @@ import {
   joinTouchingRuns,
   listIndentEnd,
   shapeSelection,
+  squareAtCarets,
   type Box,
 } from "./selection-shape";
 
@@ -81,4 +82,24 @@ test("lines that are not list items keep their leading whitespace tinted", () =>
   assert.equal(listIndentEnd("  -not a marker"), 0);
   assert.equal(listIndentEnd("    ---"), 0);
   assert.equal(listIndentEnd("paragraph"), 0);
+});
+
+test("the corners beside a caret are square, the far side stays round", () => {
+  const box = { left: 100, top: 10, width: 80, height: 20, square: [] };
+  const atEnd = squareAtCarets([box], [{ x: 180, y: 20 }], 2)[0]!;
+  assert.deepEqual([...atEnd.square].sort(), ["br", "tr"]);
+  const atStart = squareAtCarets([box], [{ x: 100, y: 20 }], 2)[0]!;
+  assert.deepEqual([...atStart.square].sort(), ["bl", "tl"]);
+  // A caret on another row, or well inside the box, changes nothing.
+  assert.deepEqual(
+    squareAtCarets([box], [{ x: 180, y: 60 }], 2)[0]!.square,
+    [],
+  );
+  assert.deepEqual(
+    squareAtCarets([box], [{ x: 140, y: 20 }], 2)[0]!.square,
+    [],
+  );
+  // Vim's visual caret sits one character inside the tinted end.
+  const visual = squareAtCarets([box], [{ x: 172, y: 20 }], 8)[0]!;
+  assert.deepEqual([...visual.square].sort(), ["br", "tr"]);
 });

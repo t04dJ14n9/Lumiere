@@ -69,11 +69,29 @@ function caretBand(
   position: { top: number; bottom: number },
 ): { top: number; bottom: number } {
   const band = rowBandAt(view, head, position);
-  if (band) {
+  if (band && isPlausibleRow(band, position)) {
     return band;
   }
   const leading = halfLeading(view, head, position.bottom - position.top);
   return { top: position.top - leading, bottom: position.bottom + leading };
+}
+
+/**
+ * Whether a measured row band can be the caret's row: it contains the glyph and
+ * is shorter than two glyphs. Anything else (rows merged by odd font metrics)
+ * would draw a caret across several lines, so the glyph rule is used instead.
+ */
+export function isPlausibleRow(
+  band: { top: number; bottom: number },
+  glyph: { top: number; bottom: number },
+): boolean {
+  const glyphHeight = glyph.bottom - glyph.top;
+  const middle = (glyph.top + glyph.bottom) / 2;
+  return (
+    band.top <= middle &&
+    middle <= band.bottom &&
+    band.bottom - band.top < 1.8 * glyphHeight
+  );
 }
 
 /** The start of the grapheme cluster that contains `position`. */
