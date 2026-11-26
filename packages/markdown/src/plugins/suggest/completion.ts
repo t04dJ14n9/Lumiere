@@ -57,20 +57,26 @@ export function allowsSuggestions(
   return kind === "tag";
 }
 /**
- * The edit that accepts a suggestion: `insert` over `range`, then `]]` when
- * `close` is set (reusing a `]]` already there), or the space `spaceAfter`
- * asks for unless one follows. `close: "replace"` replaces the whole link.
+ * The edit that accepts a suggestion: `insert` over `range`, then `]]` (or
+ * `closer`, the `)` of a Markdown link's destination) when `close` is set,
+ * reusing one already there, or the space `spaceAfter` asks for unless one
+ * follows. `close: "replace"` replaces the whole link.
  */
 export function completionEdit(
   state: EditorState,
   range: { from: number; to: number },
   insert: string,
-  options: { close: boolean | "replace"; spaceAfter?: boolean },
+  options: {
+    close: boolean | "replace";
+    closer?: string;
+    spaceAfter?: boolean;
+  },
 ): TransactionSpec {
   const closeLink = options.close;
+  const closer = options.closer ?? "]]";
   let suffix = "";
   if (closeLink === true) {
-    suffix = "]]";
+    suffix = closer;
   } else if (
     options.spaceAfter &&
     !/^\s/u.test(state.sliceDoc(range.to, range.to + 1))
@@ -84,11 +90,12 @@ export function completionEdit(
       range = { ...range, from: line.from + opening };
     }
   }
-  const reused = closeLink && state.sliceDoc(range.to, range.to + 2) === "]]";
+  const reused =
+    closeLink && state.sliceDoc(range.to, range.to + closer.length) === closer;
   return {
     changes: {
       from: range.from,
-      to: range.to + (reused ? 2 : 0),
+      to: range.to + (reused ? closer.length : 0),
       insert: insert + suffix,
     },
     selection: { anchor: range.from + insert.length + suffix.length },

@@ -2,6 +2,17 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: Markdown links had no suggestions. Typing inside `[text](` now lists
+  notes and files (`![alt](` too), `[text](progress.md#` that file's headings,
+  `[text](progress.md#^` its blocks, and `[text](#` this note's headings,
+  filtered by what is typed after them, in the Lumiere editor and in VS Code's
+  text editor. The file is found as a click on the link finds it, so among
+  `progress.md` notes in many folders the one beside the note answers. Only the
+  destination or the fragment is written, with `)` closing the link, and
+  `%20`-encoded as new Markdown links are; a leading `/` writes the path from
+  the vault root. A `.md` typed after a note's name (`[[progress.md`) no longer
+  hides the note from the `[[` list.
+
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.
   The fold column narrows to 14 px, and the text keeps as much room on the

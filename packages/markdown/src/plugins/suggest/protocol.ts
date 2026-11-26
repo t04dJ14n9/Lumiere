@@ -7,6 +7,13 @@ export const query = Schema.object({
   /** `^` typed without `#` (`[[Note^`): the link gets its `#`. */
   bare: Schema.boolean().optional(),
   /**
+   * The text is typed inside a Markdown link's parentheses (`[text](`):
+   * `note` names its file as a link does, and a suggestion is only the
+   * destination (or the fragment), written from the vault's root after a
+   * typed leading `/` and relative to the note otherwise.
+   */
+  destination: Schema.union(["relative", "root"]).optional(),
+  /**
    * Where the caret is in the note being edited, for `[[^^`: the block it
    * is in is not offered, as in Obsidian.
    */

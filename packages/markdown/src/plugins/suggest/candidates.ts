@@ -25,6 +25,11 @@ export interface Candidate {
   text: string;
   /** A note's path without `.md`, matched a point lower than its name. */
   path?: string;
+  /**
+   * A note's path with `.md`, matched last, and only for a query that holds
+   * a `.`: `progress.md` (as a Markdown link names it) still finds `progress`.
+   */
+  withExtension?: string;
   /** How much lower it ranks: an excluded note ranks 10 lower. */
   penalty: number;
   /** A block matches when its text has every word of the query. */
@@ -43,7 +48,10 @@ export function candidate(
   detail: string,
   value: Value,
   options: Partial<
-    Pick<Candidate, "text" | "path" | "penalty" | "words" | "range">
+    Pick<
+      Candidate,
+      "text" | "path" | "withExtension" | "penalty" | "words" | "range"
+    >
   > = {},
 ): Candidate {
   return {
@@ -53,6 +61,9 @@ export function candidate(
     text: options.text ?? label,
     penalty: options.penalty ?? 0,
     ...(options.path !== undefined && { path: options.path }),
+    ...(options.withExtension !== undefined && {
+      withExtension: options.withExtension,
+    }),
     ...(options.words && { words: true }),
     ...(options.range && { range: options.range }),
     order: candidateOrder(value),
@@ -97,6 +108,7 @@ export function fileCandidates(
       { kind: "file", target: file },
       {
         path: file.extension === "md" ? file.path.slice(0, -3) : file.path,
+        ...(file.extension === "md" && { withExtension: file.path }),
         penalty,
       },
     ),
