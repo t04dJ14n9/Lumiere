@@ -22,6 +22,14 @@
   caret and tinted the same in light and dark themes, in Vim's visual mode
   too. The footnote popover sits outside the note and had no selection
   colour of its own; it takes the tint too.
+- Fixed: in a heading with inline code, emphasis, strikethrough or a
+  highlight in it, a double click on a word selected around the last of those
+  instead of the word, and
+  Shift-click extended the selection to the wrong place. The boxes that stand
+  in for a heading's hidden syntax were zero tall at the line's top edge, so
+  CodeMirror's `posAtCoords` took each of them to lie above the pointer and
+  answered the last one for every point on the line. They are now one line
+  tall with no margin box, so the line is no taller than before.
 
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.

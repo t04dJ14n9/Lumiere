@@ -373,13 +373,18 @@ body.vscode-high-contrast-light
  * Hiding a heading marker leaves an empty widget span and 1em buffers.
  * `vertical-align: text-top` still lets those boxes extend a 1.2 line-height
  * by a few pixels even at height 0, so revealing `##` shifts the note.
- * Top-aligned zero boxes stay in the line for the caret without growing it.
+ * Top-aligned boxes whose margin box is zero tall stay in the line for the
+ * caret without growing it. Their border box is one line tall, not zero:
+ * CodeMirror's `posAtCoords` takes a widget rectangle that lies above the
+ * pointer to mean "the target is further along", so zero-height boxes at the
+ * line's top edge sent every point on a heading with hidden inline marks
+ * (code, emphasis, strikethrough, a highlight) to its last hidden mark.
+ * Double and Shift clicks select from that answer.
  */
 #app .cm-line.md-heading > span:empty,
 #app .cm-line.md-heading .cm-widgetBuffer {
   display: inline-block;
   vertical-align: top;
-  height: 0;
-  line-height: 0;
-  font-size: 0;
+  height: 1lh;
+  margin-bottom: -1lh;
 }
