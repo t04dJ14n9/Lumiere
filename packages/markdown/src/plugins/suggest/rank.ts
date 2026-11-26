@@ -65,7 +65,14 @@ function scoreOf(query: string, entry: Candidate): number | undefined {
   }
   const path =
     entry.path === undefined ? undefined : fuzzyScore(query, entry.path);
-  return path === undefined ? undefined : path - 1 - entry.penalty;
+  if (path !== undefined) {
+    return path - 1 - entry.penalty;
+  }
+  const extended =
+    entry.withExtension !== undefined && query.includes(".")
+      ? fuzzyScore(query, entry.withExtension)
+      : undefined;
+  return extended === undefined ? undefined : extended - 2 - entry.penalty;
 }
 
 /** Most recently changed first, as Obsidian lists notes before anything is typed. */

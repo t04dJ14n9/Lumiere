@@ -19,6 +19,34 @@
   heading alone by the snapshot and the placeholder: the host reads the flag
   from the workspace's storage and repeats it in the `ready` answer
   (`propertiesCollapsed`), and a snapshot drawn for the other state is dropped.
+- Fixed: Markdown links had no suggestions. Typing inside `[text](` now lists
+  notes and files (`![alt](` too), `[text](progress.md#` that file's headings,
+  `[text](progress.md#^` its blocks, and `[text](#` this note's headings,
+  filtered by what is typed after them, in the Lumiere editor and in VS Code's
+  text editor. The file is found as a click on the link finds it, so among
+  `progress.md` notes in many folders the one beside the note answers. Only the
+  destination or the fragment is written, with `)` closing the link, and
+  `%20`-encoded as new Markdown links are; a leading `/` writes the path from
+  the vault root. A `.md` typed after a note's name (`[[progress.md`) no longer
+  hides the note from the `[[` list.
+- Fixed: text selected in a table cell was drawn in the system's selection
+  colour, a saturated blue box, not the note's accent tint.
+  CodeMirror's `drawSelection` gives whatever is focused inside the note
+  (a table cell's editor, a Properties field, the inline title) the system
+  "Highlight" colour with `!important`, which the note's own `::selection`
+  rule could not beat. A focused field now takes the tint, and a cell draws
+  its selection with the note's layer, so it is rounded, squared at the
+  caret and tinted the same in light and dark themes, in Vim's visual mode
+  too. The footnote popover sits outside the note and had no selection
+  colour of its own; it takes the tint too.
+- Fixed: in a heading with inline code, emphasis, strikethrough or a
+  highlight in it, a double click on a word selected around the last of those
+  instead of the word, and
+  Shift-click extended the selection to the wrong place. The boxes that stand
+  in for a heading's hidden syntax were zero tall at the line's top edge, so
+  CodeMirror's `posAtCoords` took each of them to lie above the pointer and
+  answered the last one for every point on the line. They are now one line
+  tall with no margin box, so the line is no taller than before.
 
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.

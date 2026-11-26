@@ -230,6 +230,18 @@ body.vscode-high-contrast-light
   background: var(--selection-tint);
 }
 /*
+ * drawSelection hides the browser's own selection in the note, but gives
+ * whatever is focused inside the content (a Properties field, the inline
+ * title, a table cell's editor) the system "Highlight" colour with
+ * !important, so the rule above loses to it. A focused field takes the tint.
+ * A nested editor draws its selection itself and clears the native one
+ * (tables.css does it for a cell's).
+ */
+#app .cm-content :focus::selection,
+#app .cm-content :focus ::selection {
+  background-color: var(--selection-tint) !important;
+}
+/*
  * Gutters look like VS Code's: at the editor's left edge, on the editor
  * background, with the text starting right after them.
  */
@@ -361,13 +373,18 @@ body.vscode-high-contrast-light
  * Hiding a heading marker leaves an empty widget span and 1em buffers.
  * `vertical-align: text-top` still lets those boxes extend a 1.2 line-height
  * by a few pixels even at height 0, so revealing `##` shifts the note.
- * Top-aligned zero boxes stay in the line for the caret without growing it.
+ * Top-aligned boxes whose margin box is zero tall stay in the line for the
+ * caret without growing it. Their border box is one line tall, not zero:
+ * CodeMirror's `posAtCoords` takes a widget rectangle that lies above the
+ * pointer to mean "the target is further along", so zero-height boxes at the
+ * line's top edge sent every point on a heading with hidden inline marks
+ * (code, emphasis, strikethrough, a highlight) to its last hidden mark.
+ * Double and Shift clicks select from that answer.
  */
 #app .cm-line.md-heading > span:empty,
 #app .cm-line.md-heading .cm-widgetBuffer {
   display: inline-block;
   vertical-align: top;
-  height: 0;
-  line-height: 0;
-  font-size: 0;
+  height: 1lh;
+  margin-bottom: -1lh;
 }

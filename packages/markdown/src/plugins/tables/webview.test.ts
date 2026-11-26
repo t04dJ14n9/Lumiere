@@ -17,6 +17,9 @@ import { TableWidget } from "./widget";
 
 type Root = ReturnType<typeof createRoot>;
 
+/** What the fake editor hands out as the note's selection drawing. */
+const noteSelection: Extension = [];
+
 /** The tables plugin on fake services; `before` runs on the root first. */
 async function startTables(before?: (root: Root) => void) {
   const root = createRoot();
@@ -36,6 +39,7 @@ async function startTables(before?: (root: Root) => void) {
   } as unknown as EditorView;
   root.provide("editor", {
     view,
+    selection: noteSelection,
     extend(extension: Extension) {
       extensions.push(extension);
       return () => {
@@ -154,6 +158,13 @@ test("tables always register a widget and own their document-entry keys and comm
   assert.equal(renderers.length, 0);
   assert.equal(extensions.length, 0);
   assert.equal(commands.size, 0);
+});
+
+test("a cell's editor draws its selection with the note's drawing", async () => {
+  const tables = await startTables();
+  const { environment } = tables.renderers[0]!.widget(block) as TableWidget;
+  assert.equal(environment.selection, noteSelection);
+  await tables.dispose();
 });
 
 test("render/changed gives the widgets Live Preview rebuilds a new revision", async () => {

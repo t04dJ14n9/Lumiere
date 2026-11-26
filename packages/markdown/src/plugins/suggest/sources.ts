@@ -12,6 +12,7 @@ import {
 import { noteBlocks } from "../../markdown/metadata/note-blocks";
 import type { PdfSection } from "../../shared/pdf-outlines";
 import { rankedCandidates } from "./rank";
+import { destinationFile } from "./destination";
 import { t } from "@workshop/l10n";
 const isPdf = (file: VaultFile) => file.extension.toLowerCase() === "pdf";
 /** How many notes `[[^^` reads at once. */
@@ -197,6 +198,7 @@ export class SuggestionIndex {
           globalBlock: request.note === undefined,
           bare: request.bare === true,
           useWikilinks: useWikilinks || request.kind === "tag",
+          ...(request.destination && { destination: request.destination }),
         }),
       )
       .filter((item) => item.insert.length <= 8192);
@@ -224,7 +226,10 @@ export class SuggestionIndex {
     if (request.note === "") {
       return source;
     }
-    return this.vault.resolveLink(request.note, source)?.path ?? "";
+    const file = request.destination
+      ? destinationFile(this.vault, request.note, source)
+      : this.vault.resolveLink(request.note, source);
+    return file?.path ?? "";
   }
   private collect(kind: Query["kind"], path: string | undefined): Candidate[] {
     if (kind === "tag") {

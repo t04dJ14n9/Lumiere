@@ -72,6 +72,7 @@ function createEnvironment(ctx: Context): TableEnvironment {
   const { document, vim, livePreview, formatting, menu, editor } = ctx;
   return {
     language: ctx.markdown.language(),
+    selection: editor.selection,
     vim,
     links: ctx.links,
     inputGroups: () => {

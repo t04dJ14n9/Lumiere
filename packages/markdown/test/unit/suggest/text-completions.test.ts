@@ -116,6 +116,30 @@ test("a closing bracket after the caret is taken over as far as it is there", as
   }
 });
 
+test("the parenthesis after the caret is taken over by a Markdown link's destination", async () => {
+  const destination: TextCompletion = {
+    label: "Target Note",
+    detail: "",
+    insert: "Target%20Note.md)",
+    replaceFrom: 4,
+    absorbs: ")",
+  };
+  const cases: [after: string, taken: number][] = [
+    [") text", 1],
+    [" text", 0],
+    ["", 0],
+  ];
+  for (const [after, taken] of cases) {
+    const { list } = await ask({
+      line: `[x](Targ${after}`,
+      caret: 8,
+      entries: [destination],
+    });
+    assert.equal(list!.items[0]!.range!.end.character, 8 + taken, after);
+    assert.equal(list!.items[0]!.range!.start.character, 4);
+  }
+});
+
 test("nothing is offered when nothing matches or the request was cancelled", async () => {
   assert.equal(
     (await ask({ line: "[[Targ", caret: 6, entries: [] })).list,

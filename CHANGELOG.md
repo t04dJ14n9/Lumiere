@@ -19,6 +19,30 @@
   Properties are stored collapsed opens with the heading alone, in the
   first-paint snapshot too, so its text does not jump up when the editor
   takes over. Nothing waits for any of this: opening is as fast as before.
+- Markdown: typing a Markdown link's destination (`[text](`, `![alt](`) lists
+  notes and files as `[[` does, `[text](progress.md#` lists that file's
+  headings and `[text](progress.md#^` its blocks, and `[text](#` this note's
+  headings, in the Lumiere editor and in VS Code's text editor. The file is
+  the one the link opens, so with a `progress.md` in every project folder the
+  headings are those of the one beside the note. A heading is written
+  percent-encoded as a converted `[[Note#Heading]]` is, and `)` finishes the
+  link (an existing one is reused). Nothing opens for `https:` or `mailto:`
+  links, or, in the Lumiere editor, in code.
+- Markdown: a note still shows in the `[[` list after its extension is typed
+  (`[[progress.md`), where it used to vanish at the `.`.
+- Markdown: text selected in a table cell has the same colour and shape as
+  text selected anywhere else in the note: the accent tint with rounded
+  corners, not the system's saturated blue box. The same goes for text
+  selected in a Properties field, the inline title and the footnote popover
+  (Insert Footnote).
+- Markdown: double-clicking a word in a heading that has inline code,
+  emphasis, strikethrough or a highlight in it selects that word, and
+  Shift-click extends the selection to the point clicked. Both took the position from CodeMirror's
+  `posAtCoords`, which answered the heading's last hidden mark (the closing
+  backtick of an inline code span, say) for every point on the line, so a
+  double click on the first word of a heading ending in a code span selected
+  around that span. A plain click already used the browser's caret and was
+  right.
 
 ## 0.1.39 (2026-11-26)
 

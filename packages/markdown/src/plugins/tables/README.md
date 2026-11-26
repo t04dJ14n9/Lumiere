@@ -223,6 +223,9 @@ Selected cells show their selection background through inline code while keeping
 its theme foreground and monospace styling; unselected code keeps its background.
 The open cell editor and rectangular grid selections share the same inset accent
 selection box; `.table-scroll` overflow would clip a CSS outline.
+Text selected in an open cell is drawn by the note's selection layer (the editor service's
+`selection`, beside `drawSelection`, which hides the browser's), so its tint, rounded
+corners and squared caret side match the note's; `tables.css` hides CodeMirror's own layer there.
 A mostly vertical diagonal wheel that Chromium latches to the table moves the
 note by instant scrolls from the main thread, not the compositor's; once the
 table reaches its side, the rest of that gesture stays latched to the table,

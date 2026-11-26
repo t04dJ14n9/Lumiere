@@ -172,6 +172,7 @@ export function fixture() {
         settings: () => view.state.facet(editorSettings),
       });
     },
+    selection: [],
     get settings() {
       return view.state.facet(editorSettings);
     },

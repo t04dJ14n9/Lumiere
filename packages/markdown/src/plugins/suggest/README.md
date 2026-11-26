@@ -1,7 +1,8 @@
 # Suggestions
 
 Completes note links, aliases, headings, block references and tags as you type,
-corresponding to Obsidian's EditorSuggest lists.
+corresponding to Obsidian's EditorSuggest lists. The note, heading and block
+lists also open in the destination of a Markdown link (`[text](`).
 
 ## How it works
 
@@ -40,10 +41,37 @@ at that page. The bookmarks come from the injected `pdfOutlines` service;
 before a bookmark list is ranked, `prepare()` asks for it, as it reads a note
 for `[[Note#^`.
 
+Inside a Markdown link's parentheses (`[text](`, `![alt](`) the same lists
+open, from the same index and ranking: `[text](pro` offers notes,
+`[text](progress.md#Ent` that file's headings, `[text](progress.md#^` its
+blocks, and `[text](#` this note's headings. The text typed is read decoded
+(`Target%20Note.md#Second%20Se` asks for `Target Note.md` and `Second Se`). The
+file is found as following the link finds it (`destination.ts`: a bare name
+beside the note, then at the vault root; `./` and `../` from the note's
+folder; a leading `/` from the vault root), so in a vault where every project
+folder has a `progress.md`, `progress.md#` lists the headings of the one
+beside the note. A path no file has is resolved as the vault resolves any
+Markdown link, which also finds a path written without `.md`. Because the
+link text is typed already, accepting inserts only the
+destination (`progress.md`, `../Other/progress.md`, `Target%20Note.md`) or the
+fragment after `#` (a heading as `Second%20%28draft%29%20thing`, the encoding
+a converted `[[Note#Heading]]` carries, a block's id after `#^`, a PDF's
+`page=5`), whatever `links.useWikilinks` says, and finishes with `)`, reusing
+the one after the caret. A path is written as a new Markdown link writes it
+(relative to the note, `./` when a root note of the same name would capture
+it), or from the vault root when a `/` was typed first. A destination that
+begins with a scheme (`https:`, `mailto:`), holds a space (a title may follow)
+or `<`, or sits in code or frontmatter opens nothing.
+
+A typed `.md` (`[[progress.md`, `[text](progress.m`) still finds the note: a
+query that holds a `.` is also tried against the note's path with its
+extension, below the name and path matches.
+
 In VS Code's own text editor, for notes opened there (a vault with
 `"workbench.editorAssociations": {"*.md": "default"}`), typing `[[` lists the
 same notes, `[[Note#` its headings, `[[Note#^` its blocks that already have an
-id, and `[[Note|` keeps the note offered while an alias is typed. The window
+id, and `[[Note|` keeps the note offered while an alias is typed; `[text](`
+lists them for a Markdown link's destination in the same way. The window
 half answers VS Code's completion provider, which the host service
 `hostDocuments.registerCompletions` registers for Markdown files on disk: it
 reads the trigger from the line up to the caret, asks one `SuggestionIndex`
@@ -77,14 +105,19 @@ nothing typed, notes come most recently changed first.
 - `protocol.ts`: bounded query and result schemas (the caret, for `[[^^`).
 - `sources.ts`: indexed candidate groups and per-file cache invalidation.
 - `candidates.ts`: metadata candidate construction, PDF bookmarks included.
-- `insertion.ts`: deferred wiki/Markdown insertion and destination encoding.
+- `insertion.ts`: deferred wiki/Markdown insertion and destination encoding,
+  including the destination-only text inside `[text](`.
+- `destination.ts`: the file a Markdown link's path names, in the order
+  following a link looks for it.
 - `accept.ts`: the edit of an accepted suggestion, with the id of a picked block
   and the repair when the host cannot write it.
 - `rank.ts`: Obsidian's scoring and bounded best-50 selection.
 - `host.ts`: per-panel RPC and source enablement checks.
-- `native-host.ts`: window half for VS Code's text editor: `[[` completions
-  over the host service `hostDocuments`, from the same index and ranking.
-- `completion.ts`: code/frontmatter gating (tags allowed) and insertion transaction.
+- `native-host.ts`: window half for VS Code's text editor: `[[` and `[text](`
+  completions over the host service `hostDocuments`, from the same index and
+  ranking.
+- `completion.ts`: code/frontmatter gating (tags allowed) and insertion
+  transaction, closing with `]]` or a destination's `)`.
 - `webview.ts`: source service, asynchronous completion and key priority.
 - `suggest.css`: the plugin's styles, bundled through `src/webview/styles/index.css`.
 
@@ -125,6 +158,14 @@ Unresolved basename Markdown destinations (`Note`, `Note.md`) create missing
 notes on click like wikilinks; relative paths (`./x`, `folder/x`) stay open-only
 so source-relative lookup is preserved.
 
+A destination's lists are the `[[` lists, extended to Markdown links without
+being measured against Obsidian; their trigger
+(`src/markdown/link-trigger.ts`) reads only the caret's line, so link text that
+runs over a line break, and an angle-bracketed destination (`[x](<My note`),
+open nothing. `[[^^` and `[[Note^` have no counterpart: a block is reached with
+`#^`. As in `[[`, equal scores keep the vault's order, so among notes of the
+same name the one beside the note is not listed first.
+
 Tag suggestions open inside fenced/inline code and source-mode frontmatter
 (Obsidian). Link, heading, block and local (highlight) lists stay blocked in
 those regions.
@@ -132,7 +173,8 @@ those regions.
 In VS Code's text editor only links are suggested (no tags or highlight
 colours), and a block without an id is not offered, since picking it would
 write an id into another file. It reads only the line before the caret, so
-unlike the Lumiere editor it does not skip `[[` inside code or frontmatter. Notes
+unlike the Lumiere editor it does not skip `[[` or `[text](` inside code or
+frontmatter. Notes
 outside a workspace folder get nothing, and the Links and Suggestions switches
 apply as in the Lumiere editor. VS Code closes its list when nothing matches and
 opens it again at the next separator (`[`, `#`, `^`, `|`, a space, …) or on

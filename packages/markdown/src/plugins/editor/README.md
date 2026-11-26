@@ -138,7 +138,7 @@ arrive before the editor's own listener are kept and replayed by
 - `caret-geometry.ts`: character/glyph/font measurements relative to the scroller; the caret is as tall as the selection row it sits on.
 - `caret.css`: theme colours, cursor shapes, blinking and movement transitions.
 - `caret.test.ts`: native and modal cursor mapping units.
-- `selection-layer.ts`: the drawn selection, hugging each row's text, as in Obsidian.
+- `selection-layer.ts`: the drawn selection, hugging each row's text, as in Obsidian. The editor service's `selection` hands it to nested editors (a table cell's), which draw theirs the same way.
 - `selection-rows.ts`: a line's visual rows, measured from layout, shared by the selection and the caret.
 - `selection-shape.ts` / `selection-shape.test.ts`: joined runs, rounded outer corners, and list lines tinted from the marker, not the indentation.
 - Browser and real-editor specs: `test/browser/vim-caret.spec.ts` (settings), `test/browser/vim-caret-geometry.spec.ts` (graphemes, ligatures, lifecycle), `test/browser/vim-caret-vscodevim.spec.ts` (VSCodeVim's pixel rules and timings), `test/vscode/vim-caret.spec.ts` and `test/vscode/vim-caret-vscodevim.spec.ts` (against the built-in caret).

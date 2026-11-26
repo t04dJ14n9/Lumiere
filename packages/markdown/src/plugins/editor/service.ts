@@ -8,6 +8,7 @@ import type { ExtensionRegistry } from "./extensions";
 import type { ViewContributions } from "./contributions";
 import { createClipboard } from "./clipboard";
 import { caretFactory } from "./caret-view";
+import { selectionLayer } from "./selection-layer";
 
 /** Bind extension ownership to the consumer while preserving one shared editor. */
 export function createEditorService(options: {
@@ -28,6 +29,7 @@ export function createEditorService(options: {
     },
     view,
     caret: caretFactory(() => view.state.facet(editorSettings)),
+    selection: selectionLayer,
     get settings() {
       return view.state.facet(editorSettings);
     },

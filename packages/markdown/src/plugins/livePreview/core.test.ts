@@ -86,6 +86,7 @@ function livePreviewKernel(doc: string) {
     onNavigate: () => () => {},
     settled: async () => true,
     caret: () => [],
+    selection: [],
     settings: editorConfig.parse({}),
     mode: "livePreview",
     source: "note.md",

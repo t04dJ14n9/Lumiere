@@ -95,9 +95,11 @@ export class CellEditor {
           ),
           this.groups.extension,
           cellKeymap(options),
-          // Nested cells are not `.mw-editor`, so stock drawSelection stays
-          // visible (outer CSS only hides the note-level selection layer).
+          // drawSelection hides the browser's selection; the note's layer
+          // draws the cell's like the note's own. tables.css hides the stock
+          // layer, which only the note's `.mw-editor` rule hid before.
           drawSelection(),
+          options.environment.selection,
           // Table navigation gets the first chance at a cell boundary.
           this.vim.of(
             options.vim ? (this.environment.vim?.extension() ?? []) : [],
