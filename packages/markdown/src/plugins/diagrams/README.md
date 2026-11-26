@@ -10,6 +10,9 @@ Nodes styled with `class NodeName internal-link;` (or `:::internal-link`) become
 clickable internal links that open the vault note matching the node's label text
 (or node ID fallback when the label is empty).
 
+Every diagram type Mermaid bundles renders. ZenUML (`zenuml`), a Mermaid
+plugin outside its bundle, does not; write it as a `sequenceDiagram`.
+
 ## How it works
 
 The block renderer recognizes Mermaid fences and delegates display to the shared
@@ -24,7 +27,7 @@ still for 150 ms: drawing one changes the height above the view, and holding
 the text still then moves the scroll position under a scroll in flight. An SVG
 cache paints a source rendered before at once, keyed by source, trust and editor palette.
 Queued renders capture that appearance before waiting for their frame. Strict security; HTML labels off
-until Allow. Sanitized SVG replaces the original fence,
+until Allow. Sanitized SVG, `<foreignObject>` labels kept, replaces the original fence,
 and any `.internal-link` SVG nodes are wired to the `links` protocol.
 Pass and plugin disposal restore the source and prevent late results from writing.
 
@@ -36,6 +39,7 @@ Pass and plugin disposal restore the source and prevent late results from writin
 - `theme.ts` / `theme.test.ts`: editor-derived defaults (flat classic look, category colors), palette identity and theme-change observation.
 - `mermaid-session.ts`: serializes complete Mermaid configuration/render transactions across renderer disposal and recreation, retaining only owner tokens.
 - `renderer.ts`: Mermaid engine calls, `.internal-link` node wiring, per-render cancellation and cleanup.
+- `icon-packs.ts` / `icon-packs.test.ts`: the Iconify packs Mermaid icons name (Font Awesome as `fa`/`fas`/`far`/`fab`, `logos`, `material-icon-theme`), each loaded on first use.
 - `mount-queue.ts`: the render queue (start on mount, one at a time, ahead of the reader and nearest first) and the SVG cache.
 - `diagrams.test.ts` / `mount-queue.test.ts`: language recognition, editing, and render-queue coverage.
 - `clone-svg.ts` / `clone-svg.test.ts`: lightbox SVG clone keeps a unique id and rewrites Mermaid `#id`-scoped theme CSS.
@@ -51,7 +55,10 @@ No commands or default keybindings.
 
 ## Limits and differences from Obsidian
 
-HTML labels are disabled until Allow and SVG is always sanitized. Mermaid's
+HTML labels are disabled until Allow and SVG is always sanitized. The
+sanitizer keeps `<foreignObject>` (with its active content stripped) even
+before Allow, because User Journey section titles and Event Modeling boxes
+put their labels there whatever `htmlLabels` says. Mermaid's
 base theme receives defaults from the editor's actual foreground and
 background, including dark and high-contrast themes, in Mermaid's flat
 `classic` look (its default `neo` look adds offset shadows). Nodes are filled a
@@ -78,6 +85,18 @@ reset its replacement’s theme or trust configuration.
 `--font-mermaid` follows the note text font (`--text-font`, Obsidian `--font-text`). A failed render uses Obsidian's
 `mermaid-wrapper.is-guarded` chrome (title, error, Allow, source). Allow persists vault trust (`lumiere.mermaid-vault-trust`, Obsidian `mermaid-vault-trust`) and retries with `htmlLabels: true`; SVG output is still sanitized. Untrusted renders keep `htmlLabels: false`.
 Inline Mermaid sizing follows Obsidian per-type `useMaxWidth` (false for flowchart/sequence/git/er; true for gantt/journey/class/state/pie). The fence is contained to the column (`contain: inline-size`) and scrolls horizontally when the native SVG is wider; height grows with the diagram. Do not shrink the SVG via CSS `max-width: 100%`, and do not let the SVG widen the note (the pane would clip it).
+
+Icons come from bundled Iconify packs, loaded only when a diagram names one:
+Font Awesome 6 (`fa`, `fas`, `far`, `fab`), `logos` and `material-icon-theme`.
+Other packs (`mdi:` and so on) draw Mermaid's `?` box. `fa:fa-car` in a label
+draws its icon only after Allow, because Mermaid swaps it in on the HTML-label
+path; before that it stays text. Mindmap `::icon(...)` draws nothing, as in
+Mermaid 12.3 itself.
+
+ZenUML is left out on purpose: Obsidian and GitHub do not render it, its
+2 MB renderer adds a page-wide stylesheet (with unscoped rules such as
+`.container`) that stays until the editor reloads, and it ignores the editor
+theme. A `sequenceDiagram` says the same.
 
 The Obsidian behaviour above is 1.14.4's, which drew diagrams with Mermaid
 11.13.0. Obsidian 1.15.0 no longer ships Mermaid: it renders Mermaid syntax

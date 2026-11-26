@@ -18,8 +18,8 @@ function getPurifier(
 
 export interface SanitizeGraphicsOptions {
   /**
-   * Trusted Mermaid diagrams (`htmlLabels: true`) render labels inside SVG
-   * `<foreignObject>`. Without `HTML_INTEGRATION_POINTS` and tag allowlisting,
+   * Mermaid renders labels inside SVG `<foreignObject>`: all of them once the
+   * vault is trusted (`htmlLabels: true`), and some diagram types' always. Without `HTML_INTEGRATION_POINTS` and tag allowlisting,
    * DOMPurify strips those labels and leaves empty diagram boxes.
    */
   allowForeignObject?: boolean;

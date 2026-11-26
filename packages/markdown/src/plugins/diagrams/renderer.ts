@@ -11,6 +11,7 @@ import {
 import { errorMessage } from "../../shared/errors";
 import { createMermaidTrust, type MermaidTrust } from "./trust";
 import { MermaidQueue } from "./mount-queue";
+import { registerIconPacks } from "./icon-packs";
 import { bindDiagramInspector } from "./diagram-dialog";
 import { defaultSankeyNodeColors } from "./sankey";
 import { mermaidTransaction } from "./mermaid-session";
@@ -177,6 +178,7 @@ export class DiagramRenderer {
     initialize: boolean,
   ): Promise<string> {
     const { default: mermaid } = await import("mermaid");
+    registerIconPacks(mermaid);
     // Trust enables HTML labels, not loose Mermaid security or unsanitized output.
     const { trusted, palette } = appearance;
     const configuration = mermaidConfiguration(palette, trusted);
@@ -207,11 +209,13 @@ export class DiagramRenderer {
         }
         result = await mermaid.render(id, source, stage);
       }
+      // Keep <foreignObject> whatever the trust: journey sections and event
+      // modeling boxes draw their labels there even with htmlLabels off. DOMPurify still strips active content inside it.
       if (this.sanitize) {
-        return this.sanitize(result.svg, { allowForeignObject: trusted });
+        return this.sanitize(result.svg, { allowForeignObject: true });
       }
       return typeof window !== "undefined"
-        ? sanitizeGraphics(result.svg, { allowForeignObject: trusted })
+        ? sanitizeGraphics(result.svg, { allowForeignObject: true })
         : result.svg;
     } finally {
       stage?.remove();
