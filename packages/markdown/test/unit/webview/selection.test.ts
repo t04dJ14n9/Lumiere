@@ -47,6 +47,26 @@ test("the selection is a see-through accent tint: 33% on dark, 20% on light", ()
   assert.doesNotMatch(base, /selectionBackground[^{]*\{\s*[^}]*opacity/);
 });
 
+test("a focused field in the note takes the selection tint over CodeMirror's Highlight", () => {
+  // drawSelection gives what is focused inside the content (a Properties
+  // field, the inline title, a cell's editor) `Highlight !important`.
+  assert.match(
+    base,
+    /#app \.cm-content :focus::selection, #app \.cm-content :focus ::selection \{ background-color: var\(--selection-tint\) !important;/,
+  );
+});
+
+test("the footnote popover, on the body outside #app, tints its own selection", () => {
+  const css = readFileSync(
+    path.join(root, "src/plugins/footnotes/footnotes.css"),
+    "utf8",
+  ).replace(/\s+/g, " ");
+  assert.match(
+    css,
+    /\.mw-footnote-popover ::selection \{ background: var\(--selection-tint\);/,
+  );
+});
+
 test("Copy and Edit block actions share one row (top and typography)", () => {
   const markdown = readFileSync(
     path.join(root, "src/webview/styles/markdown.css"),

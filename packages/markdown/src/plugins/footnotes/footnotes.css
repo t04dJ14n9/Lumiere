@@ -110,6 +110,11 @@
 .mw-footnote-popover .cm-editor.cm-focused {
   outline: none;
 }
+/* The popover sits on the body, outside #app, so the note's selection rule
+ * (base.css) does not reach it; its editor shows the browser's selection. */
+.mw-footnote-popover ::selection {
+  background: var(--selection-tint);
+}
 .mw-footnote-popover .cm-scroller {
   font-family: inherit;
   line-height: var(--line-height, 1.5);

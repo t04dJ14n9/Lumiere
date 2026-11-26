@@ -78,6 +78,19 @@ test("the cell being edited has no fill, so its text selection shows, and a glow
   assert.match(rule, /z-index: 1;/);
 });
 
+test("a cell's own selection layer replaces CodeMirror's, and the browser's selection stays clear", () => {
+  assert.match(
+    css,
+    /#app \.hybrid-table \.cm-editor > \.cm-scroller > \.cm-selectionLayer \{[^}]*display: none;/,
+  );
+  // The note's rule that tints a focused field (base.css) must not tint a
+  // cell's text a second time behind the layer: its own selector is stronger.
+  assert.match(
+    css,
+    /#app \.hybrid-table \.cm-content:focus::selection,\s*#app \.hybrid-table \.cm-content:focus ::selection \{[^}]*background-color: transparent !important;/,
+  );
+});
+
 test("row and column grips ignore pointer hits until the table is hovered or focused", () => {
   assert.match(css, /\.table-handle \{[^}]*pointer-events: none;/);
   assert.match(

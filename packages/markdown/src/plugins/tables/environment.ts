@@ -15,6 +15,8 @@ export type Action =
 /** Services captured by one table plugin instance, shared with its cell views. */
 export interface TableEnvironment {
   language: Extension;
+  /** The note's selection drawing, for a cell's editor (see EditorService). */
+  selection: Extension;
   vim?: VimService;
   links?: LinksService;
   inputGroups(): InputGrouping;

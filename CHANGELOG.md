@@ -13,6 +13,11 @@
   links, or, in the Lumiere editor, in code.
 - Markdown: a note still shows in the `[[` list after its extension is typed
   (`[[progress.md`), where it used to vanish at the `.`.
+- Markdown: text selected in a table cell has the same colour and shape as
+  text selected anywhere else in the note: the accent tint with rounded
+  corners, not the system's saturated blue box. The same goes for text
+  selected in a Properties field, the inline title and the footnote popover
+  (Insert Footnote).
 
 ## 0.1.39 (2026-11-26)
 
