@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.38 (2026-11-26)
 
 - Markdown: back and forward arrows on the status bar, as the PDF viewer
   has, while a note is the active tab. They replay jumps within the note
