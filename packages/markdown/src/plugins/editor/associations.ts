@@ -75,8 +75,9 @@ async function migrateTextRoute(
 }
 
 /**
- * DESIGN §25.2: the editor is an option for `*.md` so that it does not take
- * over every README; this records it as the default for one workspace.
+ * DESIGN §25.2: Lumiere is Markdown's default editor; this records it for one
+ * workspace, so notes open in it there even when the user settings keep VS
+ * Code's text editor (`"*.md": "default"`).
  */
 export async function useForMarkdownInWorkspace(
   host: Pick<HostServices, "settings" | "dialogs" | "storage">,

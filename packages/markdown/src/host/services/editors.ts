@@ -55,6 +55,7 @@ function registerTrackedEditor(options: {
       ? registerReclaim(navigation, storage)
       : undefined;
   reclaim?.adoptOpenTabs();
+  reclaim?.reopenOnFirstActivation();
   return () => {
     reclaim?.dispose();
     stopEditor();

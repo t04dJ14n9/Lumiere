@@ -3,34 +3,19 @@ import {
   MARKDOWN_EDITOR,
   MARKDOWN_WORKSPACE_EDITOR_KEY,
 } from "../shared/editor-provider";
-import { readerText } from "./reader-text";
 
 const NATIVE_TEXT_EDITOR = "default";
 
 /**
- * Associations already route `*.md` through the text editor (the Search→reclaim
- * path from #458) but the workspaceEditor storage flag was never set — common
- * when settings.json copies `"*.md": "default"` without running Use Lumiere for
- * Markdown. Reclaim then treats notes as unassociated. Set the flag and clear
- * false readerText sticks from that misconfiguration.
- *
- * Returns whether the workspace should treat Markdown as Lumiere-owned
- * (existing key or just healed). The memory write is fire-and-forget; the
- * returned flag covers the same activation so the first tab event sees it.
+ * Whether this workspace uses Lumiere's earlier text-first route (#458): only
+ * one where the old Use Lumiere for Markdown command recorded it. Lumiere is
+ * now Markdown's default editor, so `"*.md": "default"` on its own is how
+ * someone keeps VS Code's text editor; it is never healed into that route.
  */
-export function healWorkspaceEditorAssociation(
+export function usesTextFirstRoute(
   memory: vscode.Memento | undefined,
-  associations: unknown = workbenchAssociations(),
 ): boolean {
-  if (memory?.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false)) {
-    return true;
-  }
-  if (!markdownOpensAsDefaultText(associations)) {
-    return false;
-  }
-  readerText.clear();
-  void memory?.update(MARKDOWN_WORKSPACE_EDITOR_KEY, true);
-  return true;
+  return memory?.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false) ?? false;
 }
 
 /**

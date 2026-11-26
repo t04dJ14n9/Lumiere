@@ -1762,10 +1762,11 @@ of `dist/` outputs and the docs.
 
 1. **Name.** **Lumiere** (pairs with PDF Workbench). Changing it is a
    find-and-replace across these documents and the manifest.
-2. **Default editor for `*.md`.** **`priority: "option"`**, plus a command,
-   **Use Lumiere for Markdown in This Workspace**, that writes the
-   workspace's `workbench.editorAssociations`. The alternative, `"default"`,
-   would capture every README in code repositories.
+2. **Default editor for `*.md`.** **`priority: "default"`** (2026-11-26, the
+   owner's choice; it was `"option"` so as not to capture every README in code
+   repositories). `"*.md": "default"` in `workbench.editorAssociations` keeps
+   VS Code's text editor; **Use Lumiere for Markdown in This Workspace** writes
+   the workspace's association for Lumiere.
 3. **Defaults.** **Obsidian's defaults** (Vim and line numbers off, readable
    line length on), with the owner's profile as a test fixture; or the owner's
    profile as product defaults.

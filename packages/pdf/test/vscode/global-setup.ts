@@ -58,6 +58,9 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
         // Newer builds open the chat beside the editor on startup.
         "workbench.secondarySideBar.defaultVisibility": "hidden",
         "workbench.startupEditor": "none",
+        // The PDF specs use Markdown files as plain text (notes, link
+        // sources); Lumiere is Markdown's default editor otherwise.
+        "workbench.editorAssociations": { "*.md": "default" },
         // DOM-driven tests need VS Code-rendered menus, including on macOS.
         "window.menuStyle": "custom",
         "security.workspace.trust.enabled": restrictedMode,

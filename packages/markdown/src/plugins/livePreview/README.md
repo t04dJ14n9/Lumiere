@@ -42,6 +42,8 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
   `treeReached`, where a transaction's tree became more than the old one
   parsed again, for indexes of the note.
 - `host.ts`: native Toggle Source command routing.
+- `mode-status.ts` / `mode-status.test.ts`: the active note's mode on the status bar (`$(eye) Live Preview` or `$(code) Source`; a click switches it).
+- `protocol.ts`: the panel's `mode` notification, sent when it starts and when it changes.
 - `webview.ts`: engine/service, invalidation, fallback and mode registrations.
 - `registry.ts`: renderer facets and reveal rules.
 - `find-match.ts`: the find bar's current match, which reveals source where a
@@ -142,8 +144,9 @@ needs no DOM; `api.ts` offers it to other plugins' indexes as
 
 ## Services, events and settings
 
-Webview injects `editor`, `commands` and `render`; host injects the host service `hostCommands` and
-`editors`. Provides `livePreview`. Listens to
+Webview injects `editor`, `commands` and `render`, and optionally `rpc` (to
+report its mode); host injects the host service `hostCommands` and `editors`,
+and optionally `views` (the mode entry). Provides `livePreview`. Listens to
 `render/changed` and `editor/modeRestored`; emits no kernel events. Initial mode
 comes from `editor.defaultMode`; Toggle Source changes only the active panel.
 Renderer registrations belong to their caller and dispose with that caller.

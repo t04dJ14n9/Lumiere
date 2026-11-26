@@ -1,5 +1,5 @@
 import { test, expect, chromium } from "@playwright/test";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { modifierClick, settledCaret } from "./source-links";
 import { paths, readState } from "./state";
@@ -23,6 +23,17 @@ test("built-in Cmd-click preserves heading fragments and native source caret on 
   writeFileSync(
     path.join(paths.workspace, "NativeLinks.md"),
     `[Middle](<${name}#middle-target>)\n\n[Last](<${name}#last-target>)\n\n[Missing](missing.md#target)\n`,
+  );
+  // Lumiere is Markdown's default editor: the source note opens in VS Code's
+  // text editor only by an association, as a reader who keeps it would set.
+  const settingsFile = path.join(paths.userData, "User", "settings.json");
+  const settings = readFileSync(settingsFile, "utf8");
+  writeFileSync(
+    settingsFile,
+    JSON.stringify({
+      ...(JSON.parse(settings) as object),
+      "workbench.editorAssociations": { "NativeLinks.md": "default" },
+    }),
   );
   const browser = await chromium.connectOverCDP(readState().webSocket);
   try {
@@ -109,6 +120,7 @@ test("built-in Cmd-click preserves heading fragments and native source caret on 
     });
     throw error;
   } finally {
+    writeFileSync(settingsFile, settings);
     await closeBrowser(browser);
   }
 });

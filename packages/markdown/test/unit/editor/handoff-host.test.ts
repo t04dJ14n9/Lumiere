@@ -2383,9 +2383,9 @@ test("with Lumiere associated directly, a text tab is not held for a Search rang
   assert.equal(commands[0]?.[2], viewType);
 });
 
-test("heal restores Search reclaim when associations are default without workspaceEditor", async (t) => {
-  // Host GUI range-link probe: settings.json had "*.md": "default" but never
-  // set lumiere.markdown.workspaceEditor, and readerText stuck the note.
+test("a default association without the workspace route keeps the text editor", async (t) => {
+  // Lumiere is Markdown's default editor, so "*.md": "default" is how someone
+  // keeps VS Code's text editor: it is never healed into Lumiere's route.
   const state = memento();
   state.values.set("lumiere.reclaim.readerText", [note]);
   settings.set("workbench.editorAssociations", {
@@ -2399,25 +2399,21 @@ test("heal restores Search reclaim when associations are default without workspa
     state as never,
   );
   t.after(() => stop.dispose());
-  assert.equal(state.values.get(MARKDOWN_WORKSPACE_EDITOR_KEY), true);
-  assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), []);
+  assert.equal(state.values.has(MARKDOWN_WORKSPACE_EDITOR_KEY), false);
+  assert.deepEqual(state.values.get("lumiere.reclaim.readerText"), [note]);
 
   tab.input = new TabInputText(Uri.parse(note));
-  const editor = nativeHunkEditor(tab, 947);
+  nativeHunkEditor(tab, 947);
   destination.ready();
   tabsChanged.fire({ opened: [tab], changed: [], closed: [] });
   await tick();
 
-  assert.deepEqual(destination.ranges, [
-    {
-      at: editor.document.getText().indexOf("Line 948\n"),
-      to: editor.document.getText().indexOf("Line 950\n") + 4,
-    },
-  ]);
+  assert.deepEqual(commands, []);
+  assert.deepEqual(destination.ranges, []);
 });
 
-test("unassociated none→text does not permanently stick via readerText", async (t) => {
-  settings.set("workbench.editorAssociations", {});
+test("a note an association keeps as text does not permanently stick via readerText", async (t) => {
+  settings.set("workbench.editorAssociations", { "*.md": "default" });
   const state = memento();
   const stop = host.reclaim.registerReclaim(undefined, state as never);
   t.after(() => stop.dispose());
@@ -2849,7 +2845,8 @@ for (const ignored of [
       settings.set("lumiere.markdown.editor.reclaimTextEditor", "off");
     }
     if (ignored === "unassociated") {
-      settings.set("workbench.editorAssociations", {});
+      // Lumiere is the default editor; an association is how a note leaves it.
+      settings.set("workbench.editorAssociations", { "*.md": "default" });
     }
     selectionChanged.fire({ textEditor: editor, kind });
     await tick();

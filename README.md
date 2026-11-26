@@ -180,9 +180,13 @@ vault over.
    `.vsix` for **Extensions: Install from VSIX…**. `code --install-extension`
    and Codespaces install the release channel.
 2. Open a folder of notes. An existing Obsidian vault works as it is.
-3. Run **Use Lumiere for Markdown in This Workspace** from the Command Palette,
-   so `*.md` files in that folder open in Lumiere. It is an option rather than
-   the default, so it does not take over every README you open.
+3. Open a note: Lumiere is the default editor for `*.md` and `*.markdown`, so
+   notes open in it with nothing to set up, including one that opened as text
+   before Lumiere started (it moves into Lumiere once, the first time Lumiere
+   starts in that workspace). **Open as Text** or **Reopen Editor With…** gives
+   VS Code's text editor for one note; to keep the text editor for all
+   Markdown, add `"workbench.editorAssociations": { "*.md": "default" }` to
+   your user or workspace settings.
 4. Open a PDF. If another PDF extension opens it first, use **Open With… ›
    Lumiere PDF**.
 

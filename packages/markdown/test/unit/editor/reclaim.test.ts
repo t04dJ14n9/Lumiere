@@ -267,6 +267,30 @@ test("the handoff from Cursor Markdown into Lumiere is left in place", () => {
   assert.equal(shouldReclaim(swap("workbench", "workbench"), context), false);
 });
 
+test("as Markdown's default editor, Lumiere owns notes no association sends elsewhere", () => {
+  const viewType = "lumiere.markdown.editor";
+  const options = { markdownIsDefault: true };
+  assert.equal(associatedWith(undefined, note, viewType, options), true);
+  assert.equal(associatedWith({}, note, viewType, options), true);
+  assert.equal(
+    associatedWith({ "*.txt": "default" }, note, viewType, options),
+    true,
+  );
+  // "*.md": "default" is how someone keeps VS Code's text editor.
+  assert.equal(
+    associatedWith({ "*.md": "default" }, note, viewType, options),
+    false,
+  );
+  assert.equal(
+    associatedWith({ "*.md": "other.editor" }, note, viewType, options),
+    false,
+  );
+  assert.equal(
+    associatedWith(undefined, "file:///a.txt", viewType, options),
+    false,
+  );
+});
+
 test("only notes the workspace routes to Lumiere are reclaimed", () => {
   const associations = { "*.md": "lumiere.markdown.editor" };
   const viewType = "lumiere.markdown.editor";
@@ -277,11 +301,15 @@ test("only notes the workspace routes to Lumiere are reclaimed", () => {
   );
   assert.equal(associatedWith(undefined, note, viewType), false);
   assert.equal(
-    associatedWith({ "*.md": "default" }, note, viewType, true),
+    associatedWith({ "*.md": "default" }, note, viewType, {
+      workspaceDefault: true,
+    }),
     true,
   );
   assert.equal(
-    associatedWith({ "*.md": "default" }, note, viewType, false),
+    associatedWith({ "*.md": "default" }, note, viewType, {
+      workspaceDefault: false,
+    }),
     false,
   );
   assert.equal(shouldReclaim(swap("none", "text"), context), true);

@@ -176,3 +176,12 @@ async function editText(
     await write(typed);
   }
 }
+
+/** A boolean setting's value for the active note, or its schema default. */
+export function isSettingOn(editing: Editing, key: string): boolean {
+  const current = editing.settings.inspect(key, editing.resource());
+  if (typeof current.value === "boolean") {
+    return current.value;
+  }
+  return ownSetting(editing, `${PREFIX}${key}`)?.schema.default === true;
+}

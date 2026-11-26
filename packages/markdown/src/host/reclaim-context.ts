@@ -39,7 +39,10 @@ export function reclaimContext(
           .get("editorAssociations"),
         value,
         viewType,
-        workspaceDefault,
+        {
+          workspaceDefault,
+          markdownIsDefault: MARKDOWN_EDITOR.priority === "default",
+        },
       ),
     bypassed: (value: string) => hasNativeOptOut(value, after),
   };

@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readerText } from "../../../src/host/reader-text";
-import { healWorkspaceEditorAssociation } from "../../../src/host/workspace-editor-heal";
+import {
+  routesMarkdownThroughText,
+  usesTextFirstRoute,
+} from "../../../src/host/workspace-editor-heal";
 import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../../../src/shared/editor-provider";
 
 function memento(initial: Record<string, unknown> = {}) {
@@ -12,54 +14,33 @@ function memento(initial: Record<string, unknown> = {}) {
       return (values.has(key) ? values.get(key) : fallback) as T;
     },
     async update(key: string, value: unknown) {
-      if (value === undefined) {
-        values.delete(key);
-      } else {
-        values.set(key, value);
-      }
+      values.set(key, value);
     },
   };
 }
 
-const defaultAssociations = {
-  "*.md": "default",
-  "*.markdown": "default",
-};
-
-test("heal sets workspaceEditor and clears false readerText sticks", () => {
-  const state = memento();
-  readerText.restore(state as never);
-  readerText.keep("file:///vault/Core.md");
-  assert.equal(readerText.has("file:///vault/Core.md"), true);
-
+test("only a workspace the old command recorded uses the text-first route", () => {
   assert.equal(
-    healWorkspaceEditorAssociation(state as never, defaultAssociations),
+    usesTextFirstRoute(
+      memento({ [MARKDOWN_WORKSPACE_EDITOR_KEY]: true }) as never,
+    ),
     true,
   );
-  assert.equal(state.values.get(MARKDOWN_WORKSPACE_EDITOR_KEY), true);
-  assert.equal(readerText.has("file:///vault/Core.md"), false);
+  assert.equal(usesTextFirstRoute(memento() as never), false);
+  assert.equal(usesTextFirstRoute(undefined), false);
 });
 
-test("heal is a no-op when workspaceEditor is already set", () => {
-  const state = memento({ [MARKDOWN_WORKSPACE_EDITOR_KEY]: true });
-  readerText.restore(state as never);
-  readerText.keep("file:///vault/kept.md");
-
+test('"*.md": "default" alone is an opt-out, never healed into the route', () => {
+  const state = memento();
+  assert.equal(usesTextFirstRoute(state as never), false);
+  assert.equal(state.values.has(MARKDOWN_WORKSPACE_EDITOR_KEY), false);
+  // The associations still say Markdown opens as text; that is the opt-out.
   assert.equal(
-    healWorkspaceEditorAssociation(state as never, defaultAssociations),
+    routesMarkdownThroughText({ "*.md": "default", "*.markdown": "default" }),
     true,
   );
-  assert.equal(readerText.has("file:///vault/kept.md"), true);
-});
-
-test("heal does not invent workspaceEditor without default associations", () => {
-  const state = memento();
   assert.equal(
-    healWorkspaceEditorAssociation(state as never, {
-      "*.md": "lumiere.markdown.editor",
-    }),
+    routesMarkdownThroughText({ "*.md": "lumiere.markdown.editor" }),
     false,
   );
-  assert.equal(state.values.has(MARKDOWN_WORKSPACE_EDITOR_KEY), false);
-  assert.equal(healWorkspaceEditorAssociation(state as never, {}), false);
 });

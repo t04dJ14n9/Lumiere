@@ -97,6 +97,7 @@
   "command.lumiere.markdown.setHeading6.title": "设置标题 6",
   "command.lumiere.markdown.setNoteFontSize.title": "设置笔记字号",
   "command.lumiere.markdown.showPluginStatus.title": "显示插件状态",
+  "command.lumiere.markdown.statusMenu.title": "快速设置…",
   "command.lumiere.markdown.swapLineDown.title": "向下交换行",
   "command.lumiere.markdown.swapLineUp.title": "向上交换行",
   "command.lumiere.markdown.tableAlignCenter.title": "表格: 居中对齐",

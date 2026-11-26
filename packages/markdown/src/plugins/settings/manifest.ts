@@ -7,7 +7,7 @@ export default defineManifest({
   kind: "core",
   defaultEnabled: true,
   surfaces: ["host"],
-  capabilities: ["commands"],
+  capabilities: ["commands", "statusBar"],
   contributes: {
     commands: [
       { id: "openSettings", title: "Open Settings", scope: "workbench" },
@@ -53,6 +53,11 @@ export default defineManifest({
         scope: "workbench",
       },
       { id: "toggleVim", title: "Toggle Vim Mode", scope: "workbench" },
+      {
+        id: "statusMenu",
+        title: "Quick Settings…",
+        scope: "workbench",
+      },
       {
         id: "toggleSpellcheck",
         title: "Toggle Spellcheck",

@@ -6,10 +6,12 @@ import { FONT_SIZE_KEY, toggles, type SettingToggle } from "./commands";
 import {
   askNumber,
   editSetting,
+  isSettingOn,
   ownSetting,
   writeSetting,
   type Editing,
 } from "./edit";
+import { registerSettingsStatus } from "./status";
 import { t } from "@workshop/l10n";
 
 /**
@@ -29,6 +31,7 @@ export const settingsHost: Plugin = {
   name: "settings",
   inject: {
     required: ["dialogs", "settings", "activeEditor", "hostCommands"],
+    optional: ["views", "editors"],
   },
   apply(ctx) {
     const settings = ctx.settings.access;
@@ -49,6 +52,7 @@ export const settingsHost: Plugin = {
     for (const toggle of toggles) {
       command(toggle.command, () => flip(editing, toggle));
     }
+    registerSettingsStatus(ctx, editing);
   },
 };
 
@@ -69,9 +73,7 @@ async function flip(editing: Editing, toggle: SettingToggle): Promise<void> {
   if (!setting) {
     return;
   }
-  const current = editing.settings.inspect(toggle.key, editing.resource());
-  const fallback = setting.schema.default === true;
-  const next = !(typeof current.value === "boolean" ? current.value : fallback);
+  const next = !isSettingOn(editing, toggle.key);
   await writeSetting(
     editing,
     setting,

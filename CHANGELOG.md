@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: Lumiere is the default editor for `*.md` and `*.markdown`, so
+  notes open in it with nothing to set up. `"workbench.editorAssociations":
+  { "*.md": "default" }` keeps VS Code's text editor and is no longer taken
+  over. The first time Lumiere starts in a workspace, notes already open as
+  text (a Codespace's first file, opened before Lumiere started) move into it
+  in place; a dirty note, a diff or one opened as text on purpose stays.
+- Markdown: the status bar shows the active note's mode (`Live Preview` or
+  `Source`; a click switches it), a Vim switch, and a gear that opens Quick
+  Settings…: the common switches with their state, then Change Setting…,
+  Manage Plugins and Open Settings.
+
 ## 0.1.38 (2026-11-26)
 
 - Markdown: back and forward arrows on the status bar, as the PDF viewer

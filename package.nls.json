@@ -97,6 +97,7 @@
   "command.lumiere.markdown.setHeading6.title": "Set Heading 6",
   "command.lumiere.markdown.setNoteFontSize.title": "Set Note Font Size",
   "command.lumiere.markdown.showPluginStatus.title": "Show Plugin Status",
+  "command.lumiere.markdown.statusMenu.title": "Quick Settings…",
   "command.lumiere.markdown.swapLineDown.title": "Swap Line Down",
   "command.lumiere.markdown.swapLineUp.title": "Swap Line Up",
   "command.lumiere.markdown.tableAlignCenter.title": "Table: Align Center",
