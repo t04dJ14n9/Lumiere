@@ -18,6 +18,14 @@
   corners, not the system's saturated blue box. The same goes for text
   selected in a Properties field, the inline title and the footnote popover
   (Insert Footnote).
+- Markdown: double-clicking a word in a heading that has inline code,
+  emphasis, strikethrough or a highlight in it selects that word, and
+  Shift-click extends the selection to the point clicked. Both took the position from CodeMirror's
+  `posAtCoords`, which answered the heading's last hidden mark (the closing
+  backtick of an inline code span, say) for every point on the line, so a
+  double click on the first word of a heading ending in a code span selected
+  around that span. A plain click already used the browser's caret and was
+  right.
 
 ## 0.1.39 (2026-11-26)
 
