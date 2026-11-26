@@ -3,8 +3,9 @@
 Renders Mermaid code fences as diagrams, like Obsidian's Mermaid support in
 Live Preview. As in Obsidian, the diagram stays rendered on clicks and
 double-clicks, including transparent gaps between nodes and the margin beside
-it. The Edit button reveals the source with the diagram's code selected, as
-does moving the caret into the fence.
+it. Only the Inspect button opens the larger view; a double-click does not
+(Obsidian's does). The Edit button reveals the source with the diagram's code
+selected, as does moving the caret into the fence.
 
 Nodes styled with `class NodeName internal-link;` (or `:::internal-link`) become
 clickable internal links that open the vault note matching the node's label text

@@ -75,7 +75,13 @@ export default defineManifest({
   },
   defaultEnabled: true,
   surfaces: ["host", "webview"],
-  capabilities: ["editorProvider", "commands", "keybindings", "navigation"],
+  capabilities: [
+    "editorProvider",
+    "commands",
+    "keybindings",
+    "navigation",
+    "statusBar",
+  ],
   // They decide how the note shares its file with VS Code's text editor.
   settingNeeds: {
     reclaimTextEditor: ["workbench"],

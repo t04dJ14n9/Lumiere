@@ -12,7 +12,8 @@ import {
   type MarkdownLocation,
 } from "./jump-history";
 import { protocol } from "./jump-protocol";
-import type { Dialogs, HostCommands } from "../../shared/host";
+import { createJumpStatus } from "./jump-status";
+import type { Dialogs, HostCommands, WorkbenchViews } from "../../shared/host";
 import { t } from "@workshop/l10n";
 
 interface PaneHistory {
@@ -25,8 +26,12 @@ interface PaneHistory {
   token?: CancelToken;
 }
 
-export function registerJumpHistory(ctx: Context, editors: Editors): void {
-  const histories = new PaneHistories(ctx, editors);
+export function registerJumpHistory(
+  ctx: Context,
+  editors: Editors,
+  views?: WorkbenchViews,
+): void {
+  const histories = new PaneHistories(ctx, editors, createJumpStatus(views));
   ctx.on("editor/opened", (panel) => histories.register(panel.id));
   ctx.on("editor/closed", (panel) => histories.close(panel.id));
   ctx.on("editor/activeChanged", () => histories.activeChanged());
@@ -59,6 +64,7 @@ class PaneHistories {
   constructor(
     private readonly ctx: Context,
     private readonly editors: Editors,
+    private readonly status: ReturnType<typeof createJumpStatus>,
   ) {
     this.dialogs = ctx.dialogs;
     this.commands = ctx.hostCommands;
@@ -146,7 +152,13 @@ class PaneHistories {
   }
 
   refresh(): void {
-    const history = this.panes.get(this.editors.active()?.id ?? "")?.history;
+    const active = this.editors.active();
+    const history = this.panes.get(active?.id ?? "")?.history;
+    this.status.update({
+      isNoteActive: active !== undefined,
+      canBack: history?.canBack ?? false,
+      canForward: history?.canForward ?? false,
+    });
     void this.commands.execute(
       "setContext",
       contributionId("canJumpBack"),
@@ -166,6 +178,7 @@ class PaneHistories {
     }
     this.panes.clear();
     this.refresh();
+    this.status.dispose();
   }
 }
 

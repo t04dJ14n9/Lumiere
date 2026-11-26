@@ -39,9 +39,9 @@ Arrow keys move through a shown source as through a link's. A click selects
 the image (as Obsidian 1.13), the caret at its start, so its source shows
 too: nothing moves while the button is down (the reveal waits for the
 release), and a block image is then scrolled back under the pointer
-(`image-click-pin.ts`) so a double-click reaches it; an image in text
-moves along its line, and the second press of a double-click that misses
-it opens its inspector all the same (`image-double-press.ts`). It stays outlined. Then `+`/`=` and `-`
+(`image-click-pin.ts`) so it does not jump under the pointer; an image in
+text moves along its line. A double-click does not open the inspector (unlike
+Obsidian's); the image's ⤢ button and Space do. It stays outlined. Then `+`/`=` and `-`
 resize it in steps of 25 pixels, from the width it shows, up to the width of
 the note's text and down to 20 pixels, as in Obsidian (written as `![[a.png|100]]`, or in a Markdown image's alt
 text, `![100](a.png)`); `0` removes the size; Space opens the image
@@ -98,7 +98,6 @@ read past.
 - `image-selection.ts`: selecting an image by a click, and its keys.
 - `image-anchor.ts`: which embed a rendered image shows, from where CodeMirror reports it (a block over its whole line or below it, an image in place of its source or after it, abutting images told apart).
 - `image-click-pin.ts`: scrolls a clicked block image back under the pointer once its source shows above it; never against another scroll: it ends at the image's first drawing after the release, and corrects nothing once the note has scrolled since the press, whatever scrolled it.
-- `image-double-press.ts`: a double-click whose second press misses the image the first selected (it moved) opens that image's inspector.
 - `image-size.ts`: an image's written size and the resize steps.
 - `estimated-height.ts`: CodeMirror height-map reserve for off-viewport remounts (inline embeds use `persistent` decorations so the reserve stays outside the viewport).
 - `image-dialog.ts`: inspector dialog, remembered scale and focus lifetime.
@@ -126,7 +125,6 @@ read past.
 - `missing.test.ts`: the text shown for missing files, headings and blocks.
 - `image-selection-keys.test.ts`, `image-resize-corner.test.ts`, `embed-actions.test.ts`: selected-image keys and chrome.
 - `image-anchor.test.ts`: an image alone on a line with trailing spaces, and abutting images, are found where they are drawn; images in rendered callouts, tables and HTML blocks are not image embeds.
-- `image-double-press.test.ts`: which second presses open the inspector.
 - `image-click-pin.test.ts`: a clicked block image keeps its place once its source shows, an edit during the press included; `test/unit/embeds/image-reveal.test.ts`: reveal, placement, focus, chains, selections, the click's press, resizing and arrows with the source shown.
 - `open-intent.test.ts`: wiki embeds carry `data-wiki`, Markdown images do not.
 - `wide-block.test.ts`: image width and horizontal scrolling in Live Preview.

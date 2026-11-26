@@ -11,8 +11,8 @@ interface Range {
  * selects the image and puts the caret at its start, so its source shows
  * above it once the button is released (the reveal waits for the release,
  * like every reveal under a press). Without this the image would move down
- * by the source's height under the pointer, and the second click of a
- * double-click (the inspector) could land on the source instead. The note
+ * by the source's height under the pointer, and a second click could land
+ * on the source instead. The note
  * scrolls by that height instead, when it can. An image in a line of text
  * moves along its line and is left alone.
  *

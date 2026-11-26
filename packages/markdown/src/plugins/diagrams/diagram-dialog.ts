@@ -51,22 +51,11 @@ export function bindDiagramInspector(
   const chrome = host.closest(".hybrid-block") ?? host;
   chrome.append(inspect);
   const inspector = new DiagramInspector(inspect, svg);
+  // Only Inspect opens the inspector: a double-click on the diagram does
+  // nothing, so selecting a label's text never throws up a full-screen view.
   inspect.addEventListener("click", (event) => inspector.show(event), {
     signal,
   });
-  host.addEventListener(
-    "dblclick",
-    (event) => {
-      if (
-        event.target instanceof Element &&
-        event.target.closest?.("a, button, .internal-link, [role=\x27link\x27]")
-      ) {
-        return;
-      }
-      inspector.show(event);
-    },
-    { signal },
-  );
   signal.addEventListener(
     "abort",
     () => {

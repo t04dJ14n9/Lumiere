@@ -3,7 +3,7 @@
  * empty shell band below the card. The paint reserve (estimatedHeight) is
  * released after measure, and the caret is hidden while the image is selected.
  */
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 import { open } from "./harness";
 
 const PNG =
@@ -56,7 +56,7 @@ test("selected |200 image has no caret bar below the card", async ({
   expect(info.caretVisible).toBe("hidden");
 });
 
-test("images (standalone and inside tables) and Mermaid diagrams open in larger window on button click or double-click", async ({
+test("images (standalone and inside tables) and Mermaid diagrams open in larger window only from their Inspect button", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1000, height: 750 });
@@ -80,10 +80,22 @@ test("images (standalone and inside tables) and Mermaid diagrams open in larger 
   ].join("\n");
   await open(page, doc);
 
+  const dialog = page.locator("dialog.image-inspector[open]");
+  const inspectButtonOf = (image: Locator) =>
+    image.locator(
+      "xpath=following-sibling::div[contains(@class,'embed-actions')]//button",
+    );
+  // A double-click selects; it no longer opens the inspector.
+  const doubleClickStaysClosed = async (target: Locator) => {
+    await target.dblclick();
+    await page.waitForTimeout(300);
+    await expect(dialog).toHaveCount(0);
+  };
+
   const standaloneImg = page.locator("img.note-image").first();
   await expect(standaloneImg).toBeVisible({ timeout: 10_000 });
-  await standaloneImg.dblclick();
-  const dialog = page.locator("dialog.image-inspector[open]");
+  await doubleClickStaysClosed(standaloneImg);
+  await inspectButtonOf(standaloneImg).dispatchEvent("click");
   await expect(dialog).toBeVisible();
   await expect(dialog.locator(".media-area img")).toBeVisible();
   await page.keyboard.press("Escape");
@@ -97,7 +109,8 @@ test("images (standalone and inside tables) and Mermaid diagrams open in larger 
     (el) => el.closest(".cm-line")?.classList.contains("image-embed") ?? false,
   );
   expect(lineHasEmbedClass).toBe(false);
-  await inlineImg.dblclick();
+  await doubleClickStaysClosed(inlineImg);
+  await inspectButtonOf(inlineImg).dispatchEvent("click");
   await expect(dialog).toBeVisible();
   // It stays open: the focus it takes does not draw the image again under
   // it (which would close it).
@@ -108,7 +121,8 @@ test("images (standalone and inside tables) and Mermaid diagrams open in larger 
 
   const tableImg = page.locator(".cm-table-widget img").first();
   await expect(tableImg).toBeVisible();
-  await tableImg.dblclick();
+  await doubleClickStaysClosed(tableImg);
+  await inspectButtonOf(tableImg).dispatchEvent("click");
   await expect(dialog).toBeVisible();
   await dialog.locator('button[aria-label="Close image"]').click();
   await expect(dialog).toHaveCount(0);
@@ -116,6 +130,7 @@ test("images (standalone and inside tables) and Mermaid diagrams open in larger 
 
   const mermaidSvg = page.locator('pre[data-fence="mermaid"] svg');
   await expect(mermaidSvg).toBeVisible({ timeout: 15_000 });
+  await doubleClickStaysClosed(mermaidSvg);
   const inspectDiagramBtn = page.locator("button.inspect-diagram");
   await expect(inspectDiagramBtn).toHaveCount(1);
   await inspectDiagramBtn.dispatchEvent("click");

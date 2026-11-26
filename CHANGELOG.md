@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: back and forward arrows on the status bar, as the PDF viewer
+  has, while a note is the active tab. They replay jumps within the note
+  (headings, footnotes, the outline) and do nothing where there is no jump;
+  the title-bar arrows still appear once there is one.
+- Markdown: only the Inspect button (⤢ on an image) and Space on a selected
+  image open a diagram or image in the larger view; a double-click no longer
+  does.
+
 ## 0.1.37 (2026-11-26)
 
 - Markdown: the selection has rounded corners, and a selection over several
