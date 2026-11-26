@@ -26,6 +26,16 @@ always lands in Lumiere's storage.) No `.obsidian` folder is ever created. Chang
 retains its warning until edited. Collapse is remembered per note and
 shared by that note's panels. New rows remain drafts until their names are
 accepted.
+Before the sheet exists (the Properties chunk loads after the editor's first
+paint), the first-paint snapshot and Live Preview's placeholder draw its
+skeleton: one row per top-level key, read by a line scan with no YAML parse
+(`markdown/properties/frontmatter-skeleton.ts`), in the sheet's own classes and
+muted, so the browser lays it out as it will lay out the sheet. When the
+scan reads every row exactly the text below does not move when the sheet
+replaces it, and the sheet starts from the height the skeleton measured
+(`widget.ts`), so the line numbers below it do not shift while CodeMirror
+measures. The sheet fades from the skeleton's opacity to full once, while the
+note opens.
 
 ## Files
 
@@ -49,7 +59,8 @@ accepted.
 - `editing.ts`: source edits, focus and registry/disclosure presentation state.
 - `edit-transaction.ts`: pure edit/order composition into one ChangeSet.
 - `edit-transaction.test.ts`: stale, no-op, rename, removal and order coverage.
-- `widget.ts`: Live Preview sheet widget lifetime and reuse.
+- `widget.ts`: Live Preview sheet widget lifetime and reuse; its first height
+  guess is the skeleton's measured one.
 - `sheet.ts`: DOM reconciliation and draft preservation.
 - `sheet-html.ts`: measured structure, inline widgets, warning and pending-row HTML.
 - `sheet-html.test.ts`: type, escaping, recursive alias and control-rendering units.
@@ -110,6 +121,10 @@ Settings are `lumiere.markdown.properties.display`
 
 ## Limits and differences from Obsidian
 
+The skeleton draws the sheet expanded, so a note whose Properties are stored
+collapsed still paints one expanded frame, and a value the scan cannot read
+(a nested map, a block scalar, an anchor, a list of over 50 items, a sheet of
+over 40 rows) is drawn as one line, which ends the snapshot there.
 Native TextDocument save and undo are authoritative. Menus use the editor menu
 service; structured clipboard uses the `obsidian/properties` payload. Type
 preferences follow the root supplied by the vault service. Source mode shows YAML; there, unlike Obsidian, the gutter and Fold All do

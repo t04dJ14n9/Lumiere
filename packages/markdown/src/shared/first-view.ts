@@ -43,6 +43,36 @@ export const PAINT_FEATURE_IDS: ReadonlySet<string> = new Set([
   "vim",
 ]);
 
+/**
+ * The block widget each first-view feature draws in place of a block's source,
+ * by the `kind` of the renderer it registers. Until the feature has loaded the
+ * block is raw Markdown (`> [!note]`, pipes, `$$`), so Live Preview holds the
+ * block's place with an empty shell instead (livePreview/pending-blocks.ts).
+ */
+export const BLOCK_RENDERER_KINDS: Readonly<Record<string, string>> = {
+  callouts: "callout",
+  diagrams: "diagram",
+  embeds: "embed",
+  math: "math",
+  properties: "properties",
+  tables: "Table",
+};
+
+/**
+ * First-view features with no block widget to wait for: they decorate text in
+ * place (links, tags, footnote marks, task boxes, code colours; inline images
+ * and math are widgets within a line, which the line's height does not wait
+ * on) or only add behaviour (videos play inside embeds' blocks).
+ */
+export const NO_BLOCK_WIDGET: ReadonlySet<string> = new Set([
+  "codeBlocks",
+  "footnotes",
+  "links",
+  "onlineVideos",
+  "tags",
+  "tasks",
+]);
+
 /** The files each feature's chunk graph adds to the entry's (scripts/feature-chunks.mjs). */
 export type FeatureChunks = Readonly<Record<string, readonly string[]>>;
 

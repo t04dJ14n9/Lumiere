@@ -6,7 +6,8 @@ import { runFeaturePhases } from "./feature-phases";
 import { headerParts } from "../markdown/properties/header-parts";
 import { registerEditorSettings } from "./editor-settings";
 import { coveringSnapshot, settleSnapshot } from "./snapshot";
-import { beginOpening, endOpening } from "./opening";
+import { beginOpening, endOpening, expectedBlockKinds } from "./opening";
+import { settledGutters } from "../plugins/editor/snapshot-layout";
 import { requestReady } from "./ready";
 import { createRoot, type RootContext } from "@workshop/core";
 import type { Infer } from "@workshop/core";
@@ -41,7 +42,10 @@ export async function bootstrap(
   // The snapshot's crossfade is the one reveal when it covers the editor.
   const isOpening = !coveringSnapshot(parent, init);
   if (isOpening) {
-    beginOpening(parent);
+    beginOpening(
+      parent,
+      settledGutters(init.features, init.preset === "obsidian"),
+    );
   }
   const root = createRoot({
     logger: logging.logger,
@@ -76,6 +80,7 @@ export async function bootstrap(
     features: init.features,
     defaults: init.preset === "obsidian",
   });
+  void featuresLoaded.then(() => root.emit("editor/featuresLoaded"));
   settleSnapshot(parent, init, featuresLoaded);
   if (isOpening) {
     endOpening(parent, featuresLoaded);
@@ -108,7 +113,10 @@ function mountPlugins(
   if (init.preset === "obsidian") {
     root.plugin(resourcesWebview);
     root.plugin(renderWebview, { trusted: init.trusted });
-    root.plugin(livePreviewWebview, { mode: init.mode });
+    root.plugin(livePreviewWebview, {
+      mode: init.mode,
+      opening: expectedBlockKinds(init.features),
+    });
   }
   return editor;
 }

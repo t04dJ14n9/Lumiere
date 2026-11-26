@@ -199,11 +199,10 @@ for (const [name, source] of Object.entries(NOTES)) {
     expect(opened.wasDropped).toBe(false);
     expect(opened.featuresLoaded).toBe(true);
     expect(opened.drawn.length).toBeGreaterThan(2);
-    // The Properties sheet is taller than its placeholder by a pixel or two
-    // for the simple frontmatter the snapshot draws below it.
-    const tolerance = name === "frontmatter" ? 2 : 0.5;
+    // The sheet's skeleton is laid out by the browser as the sheet is, so the
+    // lines below it do not move either.
     expect(
-      movedLines(opened.drawn, opened.live, tolerance),
+      movedLines(opened.drawn, opened.live, 0.5),
       "lines that move at the swap",
     ).toEqual([]);
   });

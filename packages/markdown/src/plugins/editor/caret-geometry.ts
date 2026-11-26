@@ -257,14 +257,16 @@ function isReplacedCaretBlock(view: EditorView, head: number): boolean {
   return type !== BlockType.Text;
 }
 
+/**
+ * Whether no caret can be drawn: every caret is outside the drawn range, or
+ * in a block widget. Rendering such a caret would be the widget's whole
+ * height (the frontmatter's placeholder, before Properties moves the caret
+ * out of the sheet). Focus does not change that, and a table's cell editor
+ * draws its own caret.
+ */
 function skipCaretLayout(view: EditorView): boolean {
   if (caretOutsideViewport(view)) {
     return true;
-  }
-  // The cell editor draws its own caret. The outer editor is blurred, and
-  // coordsAtPos on the table widget is the whole grid.
-  if (view.hasFocus) {
-    return false;
   }
   return view.state.selection.ranges.every((range) =>
     isReplacedCaretBlock(view, range.head),
@@ -284,7 +286,7 @@ function measureRange(
   ) {
     return [];
   }
-  if (!view.hasFocus && isReplacedCaretBlock(view, range.head)) {
+  if (isReplacedCaretBlock(view, range.head)) {
     return [];
   }
   const placed = caretCharacterPosition(view.state.doc, range, mode);

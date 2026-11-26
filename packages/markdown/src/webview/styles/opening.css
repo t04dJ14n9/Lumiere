@@ -68,3 +68,84 @@
     animation: none !important;
   }
 }
+
+/*
+ * Room for the gutters that have not mounted yet. Line numbers come with the
+ * first features, the change bars and the fold markers with the last ones;
+ * until then an empty strip of their widths sits where they will, so the text
+ * keeps the place it will have. The strip comes after the gutters that have
+ * mounted (flex `order`) and is as wide as the ones still to come: the
+ * numbers' five digits at the gutter's 12px code font, the bars' 7px and the
+ * fold area's 24px (14px without numbers), and the 26px gap VS Code leaves
+ * after the last gutter when there is no fold area.
+ */
+.is-opening .cm-scroller > .cm-content {
+  order: 2;
+}
+.is-opening .cm-scroller::before {
+  content: "";
+  flex: none;
+  order: 1;
+  font: 12px var(--code-font);
+  width: calc(
+    var(--mw-reserve-numbers, 0px) + var(--mw-reserve-bars, 0px) +
+      var(--mw-reserve-folds, 0px)
+  );
+}
+/* Without gutters the text starts at the gutters' end, as it will. */
+:is(#app.is-opening, #app .is-opening):is(
+    .opens-with-line-numbers,
+    .opens-with-git-gutter,
+    .opens-with-fold-gutter
+  )
+  .cm-scroller:not(:has(> .cm-gutters))
+  > .cm-content {
+  padding-inline-start: 0;
+}
+.is-opening.opens-with-line-numbers .cm-scroller:not(:has(.cm-lineNumbers)) {
+  --mw-reserve-numbers: calc(5ch + 2px);
+}
+.is-opening.opens-with-line-numbers:not(.opens-with-git-gutter):not(
+    .opens-with-fold-gutter
+  )
+  .cm-scroller:not(:has(.cm-lineNumbers)) {
+  --mw-reserve-numbers: calc(5ch + 26px);
+}
+.is-opening.opens-with-git-gutter .cm-scroller:not(:has(.mw-git-gutter)) {
+  --mw-reserve-bars: 26px;
+}
+.is-opening.opens-with-git-gutter.opens-with-fold-gutter
+  .cm-scroller:not(:has(.mw-git-gutter)) {
+  --mw-reserve-bars: 7px;
+}
+.is-opening.opens-with-fold-gutter .cm-scroller:not(:has(.cm-foldGutter)) {
+  --mw-reserve-folds: 24px;
+}
+.is-opening.opens-with-fold-gutter:not(.opens-with-line-numbers)
+  .cm-scroller:not(:has(.cm-foldGutter)) {
+  --mw-reserve-folds: 14px;
+}
+/* A gutter that is last for now is not last for good: no 26px gap yet. */
+:is(#app.is-opening, #app .is-opening):is(
+    .opens-with-git-gutter,
+    .opens-with-fold-gutter
+  )
+  .cm-gutter.cm-lineNumbers:last-child
+  .cm-gutterElement {
+  padding-right: 2px;
+}
+:is(#app.is-opening, #app .is-opening).opens-with-fold-gutter
+  .cm-gutter.mw-git-gutter:last-child {
+  width: 7px;
+}
+
+/* The block widgets and the line numbers that arrive late come in once. */
+@keyframes mw-reveal-block {
+  from {
+    opacity: 0.4;
+  }
+}
+.is-opening .hybrid-block:not(.hybrid-deferred),
+.is-opening .cm-gutter.cm-lineNumbers {
+  animation: mw-reveal-block var(--mw-reveal-ms) ease-out;
+}

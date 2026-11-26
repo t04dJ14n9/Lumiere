@@ -2,6 +2,21 @@
 
 ## 0.1.0 (unreleased)
 
+- Changed: opening a note is calmer. The first-paint snapshot and Live
+  Preview's placeholder draw the Properties sheet's own rows (a line scan of
+  the frontmatter, no YAML parse), muted, in the sheet's classes, so the
+  browser lays them out as it lays out the sheet; the snapshot continues
+  below it for any sheet the scan reads exactly, and fades into the editor.
+  With no snapshot the gutters' width is reserved until each gutter mounts,
+  blocks that features still to load will draw (callouts, tables, math,
+  Mermaid, embeds) are empty shells of their estimated height rather than
+  raw Markdown, and the sheet, those blocks and the line numbers reveal once
+  (100 ms, from partly visible) while the note opens. The caret is not drawn
+  inside a block widget, focused or not, and the sheet starts from the height
+  its skeleton measured, which stops the line numbers below it moving when it
+  mounts. Properties switched off no longer leaves the placeholder in place of
+  the frontmatter.
+
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.
   The fold column narrows to 14 px, and the text keeps as much room on the

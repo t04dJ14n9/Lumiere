@@ -25,7 +25,7 @@ import {
 } from "./blocks";
 import { blockDecorations, blockViewportSupport } from "./viewport-decorations";
 import { documentTree, documentTreeParser } from "./document-tree";
-import { frontmatterPlaceholderRenderer } from "./frontmatter-placeholder";
+import { endPendingBlocks, pendingBlocks } from "./pending-blocks";
 import { hybridInline } from "./inline-plugin";
 import { headingDragStart } from "./heading-drag";
 import type {} from "../render/api";
@@ -44,7 +44,11 @@ import {
 } from "./motion";
 import { sourceVisibleAt } from "./source-visibility";
 import { editorFocusTracking } from "./editor-focus-tracking";
-export const livePreviewWebview: Plugin<{ mode: "source" | "livePreview" }> = {
+export const livePreviewWebview: Plugin<{
+  mode: "source" | "livePreview";
+  /** Kinds of block whose renderers are still to load: their places are held until they do. */
+  opening?: readonly string[];
+}> = {
   name: "livePreview",
   inject: { required: ["editor", "commands", "render"], optional: ["rpc"] },
   provides: ["livePreview"],
@@ -56,6 +60,7 @@ export const livePreviewWebview: Plugin<{ mode: "source" | "livePreview" }> = {
       ctx.provide("livePreview", service);
       registerRenderInvalidation(ctx, service);
       registerFallbackBlocks(ctx);
+      registerPendingBlocks(ctx, config.opening ?? []);
       registerModeCommand(ctx, service);
     });
   },
@@ -149,13 +154,24 @@ function registerFallbackBlocks(ctx: Context): void {
       { slot: "base" },
     ),
   );
-  // Collapse a complete YAML fence before Properties chrome configures so
-  // heading/body can enter the viewport from core Live Preview (wave 12).
-  ctx.effect(() =>
-    ctx.editor.extend(blockRenderers.of(frontmatterPlaceholderRenderer()), {
-      slot: "base",
-    }),
-  );
+}
+
+/**
+ * Holds the places of the blocks that features still to load will draw, so
+ * the note shows no raw source for them and nothing below them jumps; once
+ * every feature has loaded, a block whose renderer never came shows its source.
+ */
+function registerPendingBlocks(ctx: Context, kinds: readonly string[]): void {
+  if (kinds.length === 0) {
+    return;
+  }
+  ctx.effect(() => ctx.editor.extend(pendingBlocks(kinds), { slot: "base" }));
+  ctx.on("editor/featuresLoaded", () => {
+    const effect = endPendingBlocks();
+    if (!ctx.editor.dispatchEffect?.(effect)) {
+      ctx.editor.view.dispatch({ effects: effect });
+    }
+  });
 }
 
 /** Tells the host the panel's mode, for its status bar entry. */

@@ -4,17 +4,28 @@ import test, { mock } from "node:test";
 import {
   beginOpening,
   endOpening,
+  expectedBlockKinds,
   LONGEST_OPENING_MS,
   OPENING_CLASS,
   REVEAL_MS,
 } from "../../../src/webview/opening";
 import { FADE_MS, settleSnapshot } from "../../../src/webview/snapshot";
-import { snapshotLayout } from "../../../src/plugins/editor/snapshot-layout";
+import {
+  settledGutters,
+  snapshotLayout,
+  type SettledGutters,
+} from "../../../src/plugins/editor/snapshot-layout";
 
 const css = readFileSync(
   new URL("../../../src/webview/styles/opening.css", import.meta.url),
   "utf8",
 );
+
+const ALL: SettledGutters = {
+  lineNumbers: true,
+  gitGutter: true,
+  folding: true,
+};
 
 /** A parent whose class list is a set, and a timer that runs when told. */
 function marked() {
@@ -25,7 +36,8 @@ function marked() {
     parent: {
       classList: {
         add: (name: string) => void classes.add(name),
-        remove: (name: string) => void classes.delete(name),
+        remove: (...names: string[]) =>
+          void names.forEach((name) => classes.delete(name)),
       },
     },
     schedule: (run: () => void, ms: number) => void timers.push({ run, ms }),
@@ -38,7 +50,7 @@ const settled = () => new Promise((resolve) => setImmediate(resolve));
 test("the opening is marked from the start and cleared a reveal after the features load", async () => {
   const { classes, parent, schedule, timers } = marked();
   let load!: () => void;
-  beginOpening(parent);
+  beginOpening(parent, ALL);
   assert.equal(classes.has(OPENING_CLASS), true);
   endOpening(
     parent,
@@ -63,7 +75,7 @@ test("the opening is marked from the start and cleared a reveal after the featur
 
 test("features that fail, or never load, do not leave the note opening", async () => {
   const failed = marked();
-  beginOpening(failed.parent);
+  beginOpening(failed.parent, ALL);
   endOpening(
     failed.parent,
     Promise.reject(new Error("chunk")),
@@ -74,7 +86,7 @@ test("features that fail, or never load, do not leave the note opening", async (
   assert.equal(failed.classes.has(OPENING_CLASS), false);
 
   const stuck = marked();
-  beginOpening(stuck.parent);
+  beginOpening(stuck.parent, ALL);
   endOpening(stuck.parent, new Promise(() => {}), stuck.schedule);
   stuck.timers.find((timer) => timer.ms === LONGEST_OPENING_MS)!.run();
   assert.equal(stuck.classes.has(OPENING_CLASS), false);
@@ -194,4 +206,83 @@ test("a snapshot for other settings goes at once, unfaded", () => {
   view.snapshot.dataset.layout = "another layout";
   settleSnapshot(view.parent, NOTE, new Promise(() => {}));
   assert.equal(view.isRemoved(), true);
+});
+
+test("the gutters a note will have are reserved while it opens, and the reserve goes with the opening", async () => {
+  const some = marked();
+  beginOpening(some.parent, {
+    lineNumbers: true,
+    gitGutter: false,
+    folding: true,
+  });
+  assert.deepEqual([...some.classes].sort(), [
+    "is-opening",
+    "opens-with-fold-gutter",
+    "opens-with-line-numbers",
+  ]);
+  endOpening(some.parent, Promise.resolve(), some.schedule);
+  await settled();
+  some.timers.find((timer) => timer.ms === REVEAL_MS)!.run();
+  assert.deepEqual([...some.classes], []);
+});
+
+test("a note's settings give the gutter columns it settles with", () => {
+  assert.deepEqual(settledGutters({}), ALL);
+  // Without settings only the Obsidian preset has its features on.
+  assert.deepEqual(settledGutters(undefined, false), {
+    lineNumbers: false,
+    gitGutter: false,
+    folding: false,
+  });
+  assert.deepEqual(
+    settledGutters({
+      lineNumbers: { enabled: true, config: { style: "off" } },
+      gitGutter: { enabled: false, config: {} },
+    }),
+    { lineNumbers: false, gitGutter: false, folding: true },
+  );
+  assert.deepEqual(
+    settledGutters({
+      lineNumbers: { enabled: true, config: { style: "relative" } },
+    }),
+    ALL,
+  );
+});
+
+test("a note awaits the block widgets of the features that are on, and only those", () => {
+  assert.deepEqual(expectedBlockKinds({}).sort(), [
+    "Table",
+    "callout",
+    "diagram",
+    "embed",
+    "math",
+    "properties",
+  ]);
+  assert.deepEqual(
+    expectedBlockKinds({
+      tables: { enabled: false, config: {} },
+      callouts: { enabled: false, config: {} },
+      math: { enabled: true, config: {} },
+    }).sort(),
+    ["diagram", "embed", "math", "properties"],
+  );
+  // Without the Obsidian preset's defaults a feature must be asked for.
+  assert.deepEqual(expectedBlockKinds(undefined, false), []);
+  assert.deepEqual(
+    expectedBlockKinds({ tables: { enabled: true, config: {} } }, false),
+    ["Table"],
+  );
+});
+
+test("the Properties sheet is awaited only where Properties shows it", () => {
+  const properties = (enabled: boolean, display?: string) => ({
+    properties: { enabled, config: display ? { display } : {} },
+  });
+  const awaits = (settings: ReturnType<typeof properties>) =>
+    expectedBlockKinds(settings).includes("properties");
+  assert.equal(awaits(properties(true, "visible")), true);
+  assert.equal(awaits(properties(true)), true);
+  assert.equal(awaits(properties(true, "hidden")), false);
+  assert.equal(awaits(properties(true, "source")), false);
+  assert.equal(awaits(properties(false)), false);
 });

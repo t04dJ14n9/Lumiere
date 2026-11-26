@@ -92,16 +92,31 @@ lines, with Live Preview's own classes and the settled editor's three gutter
 columns, as inert markup (escaped text; no scripts, handlers, addresses or
 images), and ends before the first thing it cannot draw exactly: tables,
 callouts, images, embeds, math, tags, footnotes, HTML, tasks, a Properties
-sheet that is taller than its placeholder. The editor mounts beneath it
-(`webview/snapshot.ts`); once every feature has loaded and a frame has painted
-the snapshot is removed, which moves nothing (`test/browser/first-paint-snapshot.spec.ts`
+sheet whose rows it cannot read exactly. The sheet is drawn as its skeleton:
+the sheet's own rows, muted, from a line scan of the frontmatter, in the
+sheet's classes (`markdown/properties/frontmatter-skeleton.ts`), so the browser
+lays out wrapping values, chips and clamped paragraphs as it will lay out the
+sheet, at any width, and the text below it is drawn too. The editor mounts beneath it
+(`webview/snapshot.ts`); once every feature has loaded the snapshot fades out
+over the editor (100 ms; at once with reduced motion). The editor beneath is
+complete and takes input at once, the snapshot never takes pointer events, and
+nothing waits for the fade; the swap moves nothing (`test/browser/first-paint-snapshot.spec.ts`
 compares every line). The host builds it before a vault's own settings are
 known, so the snapshot carries a layout key (`snapshot-layout.ts`) and the
 editor drops it at once when its own settings, a search match or a saved view
 say the note will not look as drawn. `lumiere.markdown.editor.firstPaintSnapshot`
 (default on) turns it off; Source mode, a centred page, right-to-left text, an
 inline title and notes without the line-number, change-bar and fold gutters
-never get one. VS Code shows a webview only once its page has fired `load`, and
+never get one. Without a snapshot (a restored view, a search match, Source
+mode) `webview/opening.ts` marks the page `is-opening` until the features have
+loaded and what they drew has been revealed: `webview/styles/opening.css` keeps
+room for the line numbers, change bars and fold markers until each mounts, so
+the text does not move when they arrive, and what loads late (the Properties
+sheet, callouts, tables, math, diagrams, embeds, the line numbers) comes in
+once, from partly visible, in 100 ms; widgets mounted again on a scroll never
+animate, and nothing animates with reduced motion. The caret is not drawn
+inside a block widget, focused or not, so no sheet-tall bar stands at the top
+before Properties moves the caret out of the sheet. VS Code shows a webview only once its page has fired `load`, and
 a module script's import graph delays that, so a page with a snapshot loads
 the editor by `import()` from a small inline script (`webview-html.ts`): the
 snapshot is visible as soon as the page's stylesheet is, and host messages that
@@ -147,6 +162,8 @@ arrive before the editor's own listener are kept and replayed by
 - `snapshot-layout.ts`: the presentation the snapshot assumes, as a key the
   webview compares with its own settings (`webview/snapshot.ts`).
 - `snapshot.css`: its scroller and content, sized as the editor's are.
+  `snapshot-layout.ts` also says which gutter columns the settings give
+  (`settledGutters`), for the opening's reserve.
 - `indentation.ts`: Tab and Shift+Tab commands (capture-phase for Vim NORMAL, BH-040).
 - `literal-lines.ts`: whether the caret's line is code or frontmatter text, where
   the Markdown indentation rules do not apply; `literal-lines.test.ts` covers it.

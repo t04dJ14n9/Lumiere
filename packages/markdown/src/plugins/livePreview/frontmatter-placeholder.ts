@@ -1,4 +1,4 @@
-import { WidgetType } from "@codemirror/view";
+import { WidgetType, type EditorView } from "@codemirror/view";
 import type { EditorState } from "@codemirror/state";
 import type { SyntaxNodeRef } from "@lezer/common";
 import { headerParts } from "../../markdown/properties/header-parts";
@@ -8,6 +8,7 @@ import {
   frontmatterPlaceholder,
   FRONTMATTER_PROBE_MAX,
 } from "../../markdown/properties/frontmatter-placeholder";
+import { rememberSheetHeight } from "../../markdown/properties/sheet-height-memory";
 import { blockRenderers } from "./registry";
 import type { BlockRenderer } from "./api";
 
@@ -72,17 +73,26 @@ class FrontmatterPlaceholder extends WidgetType {
     return this.source === other.source;
   }
 
-  override toDOM(): HTMLElement {
+  override toDOM(view: EditorView): HTMLElement {
     const wrapper = document.createElement("div");
     wrapper.className = FRONTMATTER_PLACEHOLDER_CLASS;
     wrapper.setAttribute("aria-hidden", "true");
     // The sheet's rows, muted, in the sheet's own classes: the real
     // PropertyWidget replaces it on configure without moving anything. A
     // skeleton that cannot be exact keeps the expanded estimate as a floor.
-    const { markup, minHeight } = frontmatterPlaceholder(this.source);
+    const { markup, minHeight, isExact } = frontmatterPlaceholder(this.source);
     wrapper.innerHTML = markup;
     if (minHeight > 0 && wrapper.style) {
       wrapper.style.minHeight = `${minHeight}px`;
+    }
+    if (isExact) {
+      // The sheet will be this tall: its widget starts from it (widget.ts).
+      view.requestMeasure({
+        key: wrapper,
+        read: () =>
+          wrapper.isConnected ? wrapper.getBoundingClientRect().height : 0,
+        write: (height) => rememberSheetHeight(this.source, height),
+      });
     }
     return wrapper;
   }

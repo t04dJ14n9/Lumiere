@@ -204,6 +204,8 @@ declare module "@workshop/core" {
       mode: "source" | "livePreview",
     ) => void;
     /** @mode emit */ "editor/configure": () => void;
+    /** Every first-view feature has loaded, or failed to: what held a place for one gives way. @mode emit */
+    "editor/featuresLoaded": () => void;
     /** @mode emit */ "editor/pluginsChanged": (panel: PanelPort) => void;
     /** @mode emit */ "editor/loading": () => void;
     /** Ready payload built; deferred panel hosts may start. @mode emit */

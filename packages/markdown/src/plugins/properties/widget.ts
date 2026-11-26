@@ -12,6 +12,7 @@ import { bindPropertyLists } from "./lists";
 import { bindPropertyControls } from "./controls";
 import { keepSelectAllInField } from "./select-all";
 import { propertiesHeightFromMarkup } from "./estimated-height";
+import { rememberedSheetHeight } from "../../markdown/properties/sheet-height-memory";
 import { releaseReserveOnceMounted } from "../../webview/ui/markdown-block-reserve";
 
 const lifetimes = new WeakMap<HTMLElement, () => void>();
@@ -122,7 +123,15 @@ export class PropertyWidget extends WidgetType {
     if (this.cachedHeight !== undefined) {
       return this.cachedHeight;
     }
-    this.cachedHeight = propertiesHeightFromMarkup(this.sheetMarkup());
+    const markup = this.sheetMarkup();
+    const guess = propertiesHeightFromMarkup(markup);
+    // An expanded sheet is as tall as the skeleton that stood in for it.
+    const isExpanded =
+      !markup.includes(" is-collapsed") && !markup.includes("render-error");
+    const measured = isExpanded
+      ? rememberedSheetHeight(this.source)
+      : undefined;
+    this.cachedHeight = measured ?? guess;
     return this.cachedHeight;
   }
 

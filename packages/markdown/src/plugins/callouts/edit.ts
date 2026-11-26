@@ -1,12 +1,10 @@
 import type { EditorState, TransactionSpec } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
+import { opensWithCalloutMarker } from "../../markdown/callout-marker";
 import { selectionTouchesTableCell } from "../../markdown/table-cell";
-/**
- * Whether a quote opens with a callout's `[!type]`, as Obsidian reads it: any
- * type but `]` (`[!note|wide]`, `[!笔记]`), then a space or the line's end.
- */
+/** Whether a quote opens with a callout's `[!type]` (see `opensWithCalloutMarker`). */
 export function isCallout(source: string): boolean {
-  return /^\s*>\s*\[![^\]\n]+\][+-]?(?:\s|$)/.test(source);
+  return opensWithCalloutMarker(source);
 }
 /**
  * Insert Callout, as in Obsidian: with a collapsed caret that only whitespace

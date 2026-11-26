@@ -56,6 +56,12 @@ syntax parser and HTML renderer share the highlight-aware emphasis flanking rule
   CodeMirror, viewport catch-up, idle slices, reach kept across edits,
   progress handed on, first-line frontmatter edits, indexing what a parse
   newly reached.
+- `frontmatter-placeholder.ts`: the Properties skeleton shown for a complete YAML
+  fence until Properties registers; it remembers its measured height for the
+  sheet (`markdown/properties/sheet-height-memory.ts`).
+- `pending-blocks.ts`: empty shells for the blocks that features still to load
+  will draw (`shared/first-view.ts` lists which); `pending-blocks.test.ts`
+  checks that the shells match the blocks the renderers match.
 - `blocks.ts`: block index, widget decorations and render revision. A block
   that starts after `> ` (display math or a diagram in a quote) carries its
   Markdown without the later lines' quote markers, which is what its widget
@@ -123,6 +129,14 @@ needs no DOM; `api.ts` offers it to other plugins' indexes as
 - Below-fold blocks use `DeferredBlockWidget` until `blockHotRanges`
   (viewport + margin, plus the caret) covers them; see
   `docs/perf/startup-viewport-2026-10-22.md`.
+- Opening: until the features have loaded, a frontmatter fence is the Properties
+  skeleton (`frontmatter-placeholder.ts`: the sheet's rows, muted, in its own
+  classes, so the sheet replaces it without anything moving), and a callout,
+  table, display math, Mermaid fence or embed whose feature is on but has not
+  registered is an empty `DeferredBlockWidget` of its estimated height
+  (`pending-blocks.ts`) instead of raw Markdown. A shell is dropped when its
+  renderer registers, and all of them when `editor/featuresLoaded` says every
+  feature has loaded, so a feature that failed shows its source.
 - `blockDecorations` rebuilds decorations only for blocks that are new to
   the index or touched by an invalidation, found by binary search;
   `metadata` (or more than half the blocks dirty) rebuilds all. A caret move
