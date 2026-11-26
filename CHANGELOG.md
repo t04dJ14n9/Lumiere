@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.40 (2026-11-27)
 
 - Markdown: a note opens calmly. The Properties sheet's rows (names and
   values, in the sheet's own layout, muted) are on screen from the first
