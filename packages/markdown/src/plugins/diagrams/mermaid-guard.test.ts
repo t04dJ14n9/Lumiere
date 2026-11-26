@@ -411,7 +411,7 @@ test("DiagramRenderer initializes Mermaid only when trust or palette changes", a
   }
 });
 
-test("DiagramRenderer passes allowForeignObject to the sanitizer only when trusted", async () => {
+test("DiagramRenderer keeps foreignObject labels whether or not the vault is trusted", async () => {
   const { default: mermaid } = await import("mermaid");
   const { DiagramRenderer } = await import("./renderer");
   const origInit = mermaid.initialize;
@@ -458,7 +458,7 @@ test("DiagramRenderer passes allowForeignObject to the sanitizer only when trust
     await renderOne("flowchart LR\nC-->D");
     assert.deepEqual(
       sanitizeCalls.map((call) => call.allowForeignObject),
-      [false, true],
+      [true, true],
     );
   } finally {
     mermaid.initialize = origInit;

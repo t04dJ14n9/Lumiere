@@ -221,8 +221,8 @@ export function isBlockControl(
 
 /**
  * Mermaid labels are SVG `<text>` / `<tspan>`, or HTML inside a
- * `<foreignObject>` once the vault's diagrams are trusted (`htmlLabels`; see
- * diagrams.css). Keep their mouse events so native selection can start; CM
+ * `<foreignObject>`: every label once the vault's diagrams are trusted
+ * (`htmlLabels`; see diagrams.css), and a few diagram types' labels always. Keep their mouse events so native selection can start; CM
  * still owns blank diagram area.
  */
 function isNativeSelectableLabel(shell: HTMLElement, target: Element): boolean {

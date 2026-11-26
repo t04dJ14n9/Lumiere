@@ -237,7 +237,7 @@ test("renderer reinitializes on real host palette changes and preserves source a
   }
 });
 
-test("real Mermaid base derivation keeps nested chart colors distinct and dark ER rows readable", async () => {
+test("real Mermaid base derivation keeps nested chart colors distinct and dark ER rows and tree labels readable", async () => {
   const { default: mermaid } = await import("mermaid");
   const { dom, document } = themedDocument();
   try {
@@ -257,6 +257,8 @@ test("real Mermaid base derivation keeps nested chart colors distinct and dark E
     assert.equal(variables.cynefin.cliffColor, palette.foreground);
     assert.equal(variables.wardley.evolutionStroke, palette.foreground);
     assert.equal(variables.radar.graticuleColor, palette.border);
+    assert.equal(variables.treeView.labelColor, palette.foreground);
+    assert.equal(variables.treeView.lineColor, palette.line);
     const plot = String(variables.xyChart.plotColorPalette).split(",");
     assert.equal(new Set(plot).size, 12);
   } finally {

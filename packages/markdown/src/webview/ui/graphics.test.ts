@@ -13,7 +13,7 @@ test("default graphics sanitizer forbids foreignObject", () => {
   }
 });
 
-test("trusted Mermaid sanitizer preserves foreignObject HTML labels without relaxing active-tag bans", () => {
+test("Mermaid sanitizer preserves foreignObject HTML labels without relaxing active-tag bans", () => {
   const options = graphicsSanitizerOptions({ allowForeignObject: true });
   assert.deepEqual(options.ADD_TAGS, ["mjx-container", "use", "foreignObject"]);
   assert.deepEqual(options.ADD_ATTR, [

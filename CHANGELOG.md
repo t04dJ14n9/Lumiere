@@ -7,6 +7,11 @@
   number, not in the indentation in front of it, and Vim's block cursor is
   as tall as the selected row beside it (it was shorter on lines with
   inline code).
+- Markdown: User Journey section titles and Event Modeling boxes show their
+  labels before Allow; they were blank because the sanitizer dropped
+  `<foreignObject>`.
+- Markdown: treeView diagrams take the editor's text and line colors, so their
+  file names are readable on a dark theme.
 
 ## 0.1.36 (2026-11-26)
 

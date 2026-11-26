@@ -207,11 +207,13 @@ export class DiagramRenderer {
         }
         result = await mermaid.render(id, source, stage);
       }
+      // Keep <foreignObject> whatever the trust: journey sections and event
+      // modeling boxes draw their labels there even with htmlLabels off. DOMPurify still strips active content inside it.
       if (this.sanitize) {
-        return this.sanitize(result.svg, { allowForeignObject: trusted });
+        return this.sanitize(result.svg, { allowForeignObject: true });
       }
       return typeof window !== "undefined"
-        ? sanitizeGraphics(result.svg, { allowForeignObject: trusted })
+        ? sanitizeGraphics(result.svg, { allowForeignObject: true })
         : result.svg;
     } finally {
       stage?.remove();

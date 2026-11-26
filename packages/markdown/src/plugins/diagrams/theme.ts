@@ -346,6 +346,11 @@ function addNestedPalettes(
     cliffColor: palette.foreground,
   };
   variables.radar = { graticuleColor: palette.border };
+  // treeView's labels and lines default to black, unreadable on a dark editor.
+  variables.treeView = {
+    labelColor: palette.foreground,
+    lineColor: palette.line,
+  };
 }
 
 export function mermaidCacheKey(
