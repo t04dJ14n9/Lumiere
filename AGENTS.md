@@ -66,8 +66,6 @@ If the task is a user / third-party custom plugin, read
   stays English.
 - Obsidian is a behaviour reference only. Never copy its code, CSS or assets.
   Compare in a disposable vault, never the owner's.
-- Read the source from `~/Code/human-learning` at commit `ff3a902e`; never
-  modify that repository or its worktrees.
 - New automated coverage is unit tests unless the owner explicitly approves
   a browser/native regression. Keep the existing browser and native suites
   passing, including later owner-approved additions. See "Testing policy" in
