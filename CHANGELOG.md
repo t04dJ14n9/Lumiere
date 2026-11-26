@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.37 (2026-11-26)
 
 - Markdown: the selection has rounded corners, and a selection over several
   lines rounds only its outline. On a list line it starts at the bullet or
