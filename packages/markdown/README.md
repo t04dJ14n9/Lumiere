@@ -29,9 +29,10 @@ profile as described in [docs/MANUAL_TEST_PLAN.md](docs/MANUAL_TEST_PLAN.md#buil
 
 ## Use
 
-- Open a note with **Open With… › Lumiere**, or run **Markdown
-  Lumiere: Use Lumiere for Markdown in This Workspace** to make
-  it the editor for `*.md` in the workspace.
+- Notes open in Lumiere, the default editor for `*.md`; **Open as Text** or
+  `"workbench.editorAssociations": { "*.md": "default" }` keeps VS Code's text
+  editor. **Use Lumiere for Markdown in This Workspace** pins Lumiere for one
+  workspace when user settings send Markdown elsewhere.
 - A folder containing `.obsidian/` is a vault: links, tags, backlinks and
   search work within it. Without one, each workspace folder is a vault.
 - **Toggle Live Preview/Source Mode** switches modes; **Open as Text** opens

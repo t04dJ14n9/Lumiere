@@ -1,3 +1,4 @@
+import { protocol as modeProtocol } from "./protocol";
 import { bindCaller } from "@workshop/core";
 import type { CallerBound, Context, Plugin } from "@workshop/core";
 import { pointerSelectionTracking } from "../../webview/ui/pointer-selection";
@@ -45,13 +46,13 @@ import { sourceVisibleAt } from "./source-visibility";
 import { editorFocusTracking } from "./editor-focus-tracking";
 export const livePreviewWebview: Plugin<{ mode: "source" | "livePreview" }> = {
   name: "livePreview",
-  inject: { required: ["editor", "commands", "render"] },
+  inject: { required: ["editor", "commands", "render"], optional: ["rpc"] },
   provides: ["livePreview"],
   apply(ctx, config) {
     // One extension flush for engine + fallback block renderers (4 extends).
     const batch = ctx.editor.batch ?? ((fn) => fn());
     batch(() => {
-      const service = registerEngine(ctx, config.mode);
+      const service = registerEngine(ctx, config.mode, modeReporter(ctx));
       ctx.provide("livePreview", service);
       registerRenderInvalidation(ctx, service);
       registerFallbackBlocks(ctx);
@@ -63,10 +64,12 @@ export const livePreviewWebview: Plugin<{ mode: "source" | "livePreview" }> = {
 function registerEngine(
   ctx: Context,
   initialMode: "source" | "livePreview",
+  reportMode: (mode: "source" | "livePreview") => void,
 ): LivePreview {
   const view = ctx.editor.view;
   const compartment = new Compartment();
   let mode = ctx.editor.mode ?? initialMode;
+  reportMode(mode);
   const extension = engineExtensions(ctx);
   ctx.effect(() =>
     ctx.editor.extend(compartment.of(mode === "source" ? [] : extension)),
@@ -105,6 +108,7 @@ function registerEngine(
     setMode(next: "source" | "livePreview") {
       mode = next;
       ctx.editor.mode = next;
+      reportMode(next);
       view.dispatch({
         effects: compartment.reconfigure(mode === "source" ? [] : extension),
       });
@@ -152,6 +156,12 @@ function registerFallbackBlocks(ctx: Context): void {
       slot: "base",
     }),
   );
+}
+
+/** Tells the host the panel's mode, for its status bar entry. */
+function modeReporter(ctx: Context) {
+  return (mode: "source" | "livePreview") =>
+    ctx.rpc?.notify(modeProtocol, "mode", { mode });
 }
 
 function registerModeCommand(ctx: Context, service: LivePreview): void {

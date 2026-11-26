@@ -14,7 +14,6 @@ import {
   hasSelectionTarget,
   nativeSelectionRange,
 } from "./reclaim-transfer";
-import { MARKDOWN_WORKSPACE_EDITOR_KEY } from "../shared/editor-provider";
 import { isMarkdownAbsentOnDisk } from "./markdown-absent-on-disk";
 import { readerText } from "./reader-text";
 import type { NativeNavigation } from "./navigation";
@@ -24,10 +23,15 @@ import {
   shouldTransferSelection,
 } from "./reclaim-selection";
 import {
-  healWorkspaceEditorAssociation,
+  usesTextFirstRoute,
   routesMarkdownThroughText,
 } from "./workspace-editor-heal";
 import { kindOf, labelUri, tabModel, uriOf } from "./reclaim-tabs";
+import {
+  FIRST_ACTIVATION_KEY,
+  notesToReopen,
+  type OpenTab,
+} from "./first-activation-policy";
 
 export { textBypass, handoffLease } from "./reclaim-opt-out";
 
@@ -61,16 +65,16 @@ function releaseLeaseWithoutTextTab(tab: vscode.Tab): string | undefined {
 export function registerReclaim(
   navigation?: NativeNavigation,
   memory?: vscode.Memento,
-): vscode.Disposable & { adoptOpenTabs(): void } {
+): vscode.Disposable & {
+  adoptOpenTabs(): void;
+  reopenOnFirstActivation(): void;
+} {
   const recentTransfers = new Bypass();
   const transfer = createReclaimTransfer(navigation, recentTransfers);
   const swaps = new TabSwaps(tabModel);
   readerText.restore(memory);
-  const workspaceEditorHealed = healWorkspaceEditorAssociation(memory);
   const workspaceDefault = () =>
-    (workspaceEditorHealed ||
-      (memory?.get(MARKDOWN_WORKSPACE_EDITOR_KEY, false) ?? false)) &&
-    routesMarkdownThroughText();
+    usesTextFirstRoute(memory) && routesMarkdownThroughText();
   const scheduler = createReclaimScheduler({
     open: transfer.open,
     readSelection: nativeSelectionRange,
@@ -114,7 +118,52 @@ export function registerReclaim(
         .adopt(vscode.window.tabGroups.all.flatMap((group) => group.tabs))
         .forEach(judge);
     },
+    /**
+     * Once per workspace: move notes that opened in the text editor before
+     * Lumiere started (a Codespace's first file) into Lumiere, in place.
+     */
+    reopenOnFirstActivation: () =>
+      reopenOnFirstActivation(memory, workspaceDefault(), scheduler.schedule),
   };
+}
+
+function reopenOnFirstActivation(
+  memory: vscode.Memento | undefined,
+  workspaceDefault: boolean,
+  schedule: (tab: vscode.Tab, uri: string, fromText: boolean) => void,
+): void {
+  if (!memory || memory.get(FIRST_ACTIVATION_KEY, false)) {
+    return;
+  }
+  void memory.update(FIRST_ACTIVATION_KEY, true);
+  for (const { tab, uri } of firstActivationNotes(workspaceDefault)) {
+    schedule(tab, uri, true);
+  }
+}
+
+function firstActivationNotes(workspaceDefault: boolean) {
+  const active = vscode.window.tabGroups.activeTabGroup.activeTab;
+  const tabs = vscode.window.tabGroups.all.flatMap((group) =>
+    group.tabs.flatMap((tab): OpenTab<vscode.Tab>[] => {
+      const uri = uriOf(tab);
+      return uri
+        ? [
+            {
+              tab,
+              uri,
+              kind: kindOf(tab),
+              isDirty: tab.isDirty,
+              isActive: tab === active,
+            },
+          ]
+        : [];
+    }),
+  );
+  return notesToReopen(tabs, {
+    isNote: (uri) => reclaimContext(uri, workspaceDefault).isNote(uri),
+    isLumieres: (uri) => reclaimContext(uri, workspaceDefault).associated(uri),
+    isOptedOut: (uri) => reclaimContext(uri, workspaceDefault).bypassed(uri),
+  });
 }
 
 /** Whether a command's selection change moves the note into Lumiere. */

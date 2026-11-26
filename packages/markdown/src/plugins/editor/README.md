@@ -202,11 +202,21 @@ the editor channel (`log`) at warn and above, and at debug too while
 `lumiere.markdown.debug.logging` (default false) is on; the host re-checks that
 setting before writing a forwarded debug line.
 
-**Use Lumiere for Markdown in This Workspace** writes `*.md` and
-`*.markdown` into the workspace's `workbench.editorAssociations`, keeping its
-other entries. The editor is otherwise only an option for Markdown (DESIGN
-§25.2), so it does not take over every README; this makes a workspace behave
-like an Obsidian vault, where notes always open in the editor.
+Lumiere is the default editor for Markdown (DESIGN §25.2), so notes open in
+it unless `workbench.editorAssociations` says `"*.md": "default"`, which keeps
+VS Code's text editor and is never overridden. **Use Lumiere for Markdown in
+This Workspace** writes `*.md` and `*.markdown` into the workspace's
+associations, keeping its other entries: a workspace that should open notes
+in Lumiere although the user settings keep text.
+
+The first time Lumiere starts in a workspace (`lumiere.markdown.firstActivationReopened`
+in workspace state), notes already open in the text editor move into it in
+place: a Codespace or a restored window may open one before Lumiere has
+installed or started, and reclaim only judges tab changes after activation.
+Only clean text tabs of Markdown files on disk that no association keeps as
+text and nobody opened as text on purpose move; the active one stays in front
+(`src/host/first-activation-policy.ts`). Later, a text tab is the reader's
+choice and stays.
 
 `editor.reclaimTextEditor` (`auto`/`on`/`off`, auto meaning on in Cursor
 only) is read by the host (`src/host/reclaim.ts`): a note the workspace routes

@@ -28,8 +28,8 @@ never open a real vault.
 
    For Cursor use `cursor` with the same flags. Delete `/tmp/mdwb-manual`
    and `/tmp/mdwb-vault` afterwards.
-4. Run **Lumiere: Use Lumiere for Markdown in This
-   Workspace** once, so `.md` files open in Lumiere (see Editor below).
+4. Open a note: `.md` files open in Lumiere, the default editor for Markdown
+   (see Editor below).
 5. Turn on `lumiere.markdown.debug.logging` while testing and keep the
    **Lumiere** output channel open; note any error lines in the
    result.
@@ -147,20 +147,25 @@ do not install a VSIX or use the owner's profile.
    workspace `settings.json` gets `workbench.editorAssociations` entries for
    `*.md` and `*.markdown`, other associations stay, and running it again
    changes nothing. The entries name `lumiere.markdown.editor` (not
-   `default`). A note opened from the Explorer now opens in the
-   Lumiere editor without a text editor tab first. **Open as Text** still
-   opens the text editor, and that tab is not reclaimed.
-4. Run **Note Actions** and **Selection Actions** from the palette (with and
+   `default`). A note opened from the Explorer opens in the Lumiere editor
+   without a text editor tab first. **Open as Text** still opens the text
+   editor, and that tab is not reclaimed. With `"*.md": "default"` in the
+   user settings instead, notes open as text and Lumiere never takes them.
+4. In a fresh workspace (no Lumiere workspace state), open a note as text
+   before installing Lumiere, then install it: the note moves into Lumiere
+   once, in its group and position. Reload: a note opened as text since then
+   stays as text.
+5. Run **Note Actions** and **Selection Actions** from the palette (with and
    without a selection): a quick pick lists the registered actions.
-5. Change `lumiere.markdown.editor.readableLineLength`,
+6. Change `lumiere.markdown.editor.readableLineLength`,
    `lumiere.markdown.editor.rightToLeft`, `lumiere.markdown.editor.useTabs`
    and `lumiere.markdown.editor.tabSize` with the note open: the editor
    updates without reopening and keeps text, folds and selection.
    `lumiere.markdown.editor.defaultMode` applies to newly opened panels.
-6. With `lumiere.markdown.debug.logging` on, the **Lumiere**
+7. With `lumiere.markdown.debug.logging` on, the **Lumiere**
    output channel shows debug lines from the host and the webview; with it
    off, only warnings and errors.
-7. Right-click a selection that spans hidden syntax (bold, a link): the
+8. Right-click a selection that spans hidden syntax (bold, a link): the
    menu has Cut, Copy and Paste. Copy and Cut put the exact source on the
    clipboard; Paste of a copied web page section arrives as Markdown, as
    Mod+V does. Right-click in a table cell or a property chip: their own
@@ -169,7 +174,7 @@ do not install a VSIX or use the owner's profile.
    link), each opening beside its row; VS Code and Cursor list the
    commands' titles (Toggle Bold).
 
-8. Copy `Core.md` repeatedly into a disposable long note (at least 300 lines).
+9. Copy `Core.md` repeatedly into a disposable long note (at least 300 lines).
    At the default `lumiere.markdown.editor.dragScrollSpeed: 4`, drag a text
    selection to within 6 px of the top/bottom viewport edge and hold the
    pointer still: scrolling and selection extension continue, substantially
@@ -1374,6 +1379,7 @@ Use the disposable fixture vault from Setup. These rows enumerate every generate
 | `lumiere.markdown.toggleInlineTitle` — Toggle Inline Title | unbound | On a disposable fixture, run Toggle Inline Title; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleInlineGitChanges` — Toggle Inline Git Changes | unbound | On a disposable fixture, run Toggle Inline Git Changes; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.toggleVim` — Toggle Vim Mode | unbound | On a disposable fixture, run Toggle Vim Mode; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
+| `lumiere.markdown.statusMenu` — Quick Settings… | unbound | With a note active, click the status bar gear (or run Quick Settings…): the switches show their state; pick one and its setting flips; Change Setting…, Manage Plugins and Open Settings run those commands. The status bar also shows the note's mode (a click switches it) and a Vim switch. |
 | `lumiere.markdown.toggleSpellcheck` — Toggle Spellcheck | unbound | On a disposable fixture, run Toggle Spellcheck; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.insertTable` — Insert Table | unbound | On a disposable fixture, run Insert Table; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |
 | `lumiere.markdown.tableInsertRowAbove` — Table: Insert Row Above | unbound | On a disposable fixture, run Table: Insert Row Above; confirm its named action using the plugin scenarios above, then undo where applicable. Repeat after disable/re-enable and switching panes. |

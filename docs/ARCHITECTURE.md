@@ -529,8 +529,8 @@ note's selection and the active note.
 The path from "open `Note.md`" to an editable note, and where its time goes:
 
 1. VS Code activates the extension (once per window) and resolves the custom
-   editor. **Use Lumiere for Markdown in This Workspace** associates `*.md` with
-   `lumiere.markdown.editor`, so VS Code hands the note straight to Lumiere.
+   editor. Lumiere is the default editor for `*.md`, so VS Code hands the note
+   straight to Lumiere unless an association keeps the text editor.
 2. The editor host creates the panel tree, finds the note's vault (indexed on
    first use, or loaded from its snapshot) and starts the critical panel hosts.
 3. The host builds the page's HTML with the note's first screen already in it:

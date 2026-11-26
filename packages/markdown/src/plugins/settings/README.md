@@ -21,6 +21,15 @@ who do not want to dig through the Settings UI.
 - **Toggle Inline Title** flips `lumiere.markdown.plugins.inlineTitle.enabled`.
 - **Toggle Vim Mode** flips `lumiere.markdown.plugins.vim.enabled` (Vim also
   decides the caret shape; see the Vim plugin).
+- **Quick Settings…** opens a menu: the switches above (and Source mode for the
+  active note), each with its state, then Change Setting…, Manage Plugins and
+  Open Settings. Picking a row runs that row's command.
+
+While a note is the active tab the status bar shows two entries from here: a
+Vim switch (`$(keyboard) Vim` or `Vim off`; a click runs Toggle Vim Mode) and a
+gear that opens Quick Settings…. The Vim switch lives here because the Vim
+plugin is off by default; while it is on, its own entry on the left shows the
+mode.
 
 ## How it works
 
@@ -60,11 +69,13 @@ dedicated command's key exists in package.json with the right type.
 - `edit.ts`: editing by type and `writeSetting`, the single write path.
 - `../../shared/setting-schema.ts`: schema kinds, value checks and the write gate.
 - `host.ts`: command registration.
+- `status.ts`: the status bar's Vim switch and settings gear, and Quick Settings….
+- `status-menu.ts` / `status-menu.test.ts`: the Quick Settings rows from the settings' state (pure).
 - `../../host/settings-access.ts`: the VS Code side (`inspect`, `update`, `openUi`).
 
 ## Services, events and settings
 
-Injects the host services `hostCommands`, `dialogs`, `activeEditor` and `settings`. Provides nothing, emits nothing. Adds no settings of its
+Injects the host services `hostCommands`, `dialogs`, `activeEditor` and `settings`, and optionally `views` and `editors` (for the status bar entries). Provides nothing, emits nothing. Adds no settings of its
 own; every key above is contributed by the plugin that owns it.
 
 ## Limits and differences from Obsidian

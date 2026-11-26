@@ -83,7 +83,7 @@
             "filenamePattern": "*.markdown"
           }
         ],
-        "priority": "option"
+        "priority": "default"
       },
       {
         "viewType": "lumiere.pdf.viewer",
@@ -745,6 +745,11 @@
       {
         "command": "lumiere.markdown.toggleVim",
         "title": "%command.lumiere.markdown.toggleVim.title%",
+        "category": "Lumiere"
+      },
+      {
+        "command": "lumiere.markdown.statusMenu",
+        "title": "%command.lumiere.markdown.statusMenu.title%",
         "category": "Lumiere"
       },
       {
@@ -2272,6 +2277,9 @@
         },
         {
           "command": "lumiere.markdown.toggleVim"
+        },
+        {
+          "command": "lumiere.markdown.statusMenu"
         },
         {
           "command": "lumiere.markdown.toggleSpellcheck"

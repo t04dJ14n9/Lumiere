@@ -18,7 +18,11 @@ export interface EditorProvider {
    * owns saving, undo and dirty state.
    */
   readonly document: "text";
-  /** `option`: offered in Reopen With and by associations, never forced. */
+  /**
+   * `default`: VS Code opens the files in this editor unless an association
+   * says otherwise (`"*.md": "default"` keeps the text editor);
+   * `option`: offered in Reopen With and by associations, never forced.
+   */
   readonly priority: "default" | "option";
   readonly retainContextWhenHidden: boolean;
   readonly multipleEditorsPerDocument: boolean;
@@ -29,7 +33,7 @@ export const MARKDOWN_EDITOR: EditorProvider = Object.freeze({
   displayName: "Lumiere",
   filenamePatterns: Object.freeze(["*.md", "*.markdown"]),
   document: "text",
-  priority: "option",
+  priority: "default",
   retainContextWhenHidden: true,
   multipleEditorsPerDocument: true,
 });

@@ -288,17 +288,24 @@ export function associatedWith(
   associations: unknown,
   uri: string,
   viewType: string,
-  workspaceDefault = false,
+  {
+    workspaceDefault = false,
+    markdownIsDefault = false,
+  }: { workspaceDefault?: boolean; markdownIsDefault?: boolean } = {},
 ): boolean {
-  if (!associations || typeof associations !== "object") {
-    return false;
-  }
   const extension = /\.(md|markdown)$/i.exec(uri)?.[1]?.toLowerCase();
-  const map = associations as Record<string, unknown>;
   if (extension === undefined) {
     return false;
   }
+  const map =
+    associations && typeof associations === "object"
+      ? (associations as Record<string, unknown>)
+      : {};
   const associated = map[`*.${extension}`];
+  if (associated === undefined) {
+    // No association: VS Code opens Markdown in Lumiere, its default editor.
+    return markdownIsDefault;
+  }
   return (
     associated === viewType || (workspaceDefault && associated === "default")
   );
