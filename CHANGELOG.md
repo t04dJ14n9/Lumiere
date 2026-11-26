@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: the selection has rounded corners, and a selection over several
+  lines rounds only its outline. On a list line it starts at the bullet or
+  number, not in the indentation in front of it, and Vim's block cursor is
+  as tall as the selected row beside it (it was shorter on lines with
+  inline code).
+
 ## 0.1.36 (2026-11-26)
 
 - PDF agent bridge on Windows: when a folder is added to or removed from the
