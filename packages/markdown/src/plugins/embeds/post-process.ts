@@ -333,15 +333,6 @@ class EmbedPass implements PassEmbeds {
     inspect.textContent = "⤢";
     inspect.setAttribute("aria-label", t("Inspect image: {0}", image.alt));
     const actions = mountImageEmbedActions(image, host, inspect);
-    image.addEventListener(
-      "dblclick",
-      (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        inspect.click();
-      },
-      { signal: this.lives.signal(node) },
-    );
     this.lives.onRelease(node, () => {
       actions.remove();
       if (host !== node && host.parentNode) {
