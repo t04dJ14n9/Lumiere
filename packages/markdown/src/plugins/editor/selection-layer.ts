@@ -14,7 +14,12 @@ import {
   visualRows,
   type Row,
 } from "./selection-rows";
-import { listIndentEnd, shapeSelection } from "./selection-shape";
+import {
+  listIndentEnd,
+  shapeSelection,
+  squareAtCarets,
+  type CaretPoint,
+} from "./selection-shape";
 
 /**
  * Where a list line's tint starts. The text alone cannot tell a list item from
@@ -257,18 +262,58 @@ export function selectionMarkers(view: EditorView): RectangleMarker[] {
       out.push(...spanMarkers(view, range, geometry));
     }
   }
-  return roundedMarkers(out);
+  if (out.length === 0) {
+    return out;
+  }
+  return roundedMarkers(out, caretPoints(view, geometry));
 }
 
-/** The markers joined and given rounded outer corners (selection-shape.ts). */
-function roundedMarkers(markers: RectangleMarker[]): RectangleMarker[] {
+/**
+ * Where each non-empty selection meets its caret. Outside Vim's visual mode
+ * that is the head. In visual mode the block cursor covers the character at
+ * the head and the tint stops at that character's edge, so both of its edges
+ * count.
+ */
+function caretPoints(view: EditorView, geometry: Geometry): CaretPoint[] {
+  const visual = caretModeOf(view) === "visual";
+  const length = view.state.doc.length;
+  const points: CaretPoint[] = [];
+  for (const range of view.state.selection.ranges) {
+    if (range.empty) {
+      continue;
+    }
+    const at = visual
+      ? [range.head - 1, range.head, range.head + 1]
+      : [range.head];
+    for (const pos of at) {
+      const coords = pos >= 0 && pos <= length ? view.coordsAtPos(pos) : null;
+      if (coords) {
+        points.push({
+          x: coords.left - geometry.origin.left,
+          y: (coords.top + coords.bottom) / 2 - geometry.origin.top,
+        });
+      }
+    }
+  }
+  return points;
+}
+
+/**
+ * The markers joined and given rounded outer corners (selection-shape.ts),
+ * square on the side where a caret meets them.
+ */
+function roundedMarkers(
+  markers: RectangleMarker[],
+  carets: CaretPoint[],
+): RectangleMarker[] {
   const boxes = markers.map((marker) => ({
     left: marker.left,
     top: marker.top,
     width: marker.width ?? 0,
     height: marker.height,
   }));
-  return shapeSelection(boxes).map(
+  const shaped = squareAtCarets(shapeSelection(boxes), carets, 2);
+  return shaped.map(
     (box) =>
       new RectangleMarker(
         [

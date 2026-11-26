@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: consecutive footnote references (`[^30][^31]`) read "30,31"
+  instead of running together as "3031", in Live Preview and in tables and
+  callouts.
+- Markdown: Vim's block cursor in a wrapped table cell (or any line whose
+  glyphs are as tall as a row, as with CJK fallback fonts) covers one row
+  again, not the whole cell.
+- Markdown: the selection's corners are square where the cursor meets it,
+  as in VS Code, so the cursor sits flush against the tint; the far side
+  stays rounded. In Vim's visual mode the tint now meets the block cursor
+  with no gap.
+
 ## 0.1.38 (2026-11-26)
 
 - Markdown: back and forward arrows on the status bar, as the PDF viewer
