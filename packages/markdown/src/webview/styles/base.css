@@ -230,6 +230,18 @@ body.vscode-high-contrast-light
   background: var(--selection-tint);
 }
 /*
+ * drawSelection hides the browser's own selection in the note, but gives
+ * whatever is focused inside the content (a Properties field, the inline
+ * title, a table cell's editor) the system "Highlight" colour with
+ * !important, so the rule above loses to it. A focused field takes the tint.
+ * A nested editor draws its selection itself and clears the native one
+ * (tables.css does it for a cell's).
+ */
+#app .cm-content :focus::selection,
+#app .cm-content :focus ::selection {
+  background-color: var(--selection-tint) !important;
+}
+/*
  * Gutters look like VS Code's: at the editor's left edge, on the editor
  * background, with the text starting right after them.
  */

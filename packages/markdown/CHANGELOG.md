@@ -12,6 +12,16 @@
   `%20`-encoded as new Markdown links are; a leading `/` writes the path from
   the vault root. A `.md` typed after a note's name (`[[progress.md`) no longer
   hides the note from the `[[` list.
+- Fixed: text selected in a table cell was drawn in the system's selection
+  colour, a saturated blue box, not the note's accent tint.
+  CodeMirror's `drawSelection` gives whatever is focused inside the note
+  (a table cell's editor, a Properties field, the inline title) the system
+  "Highlight" colour with `!important`, which the note's own `::selection`
+  rule could not beat. A focused field now takes the tint, and a cell draws
+  its selection with the note's layer, so it is rounded, squared at the
+  caret and tinted the same in light and dark themes, in Vim's visual mode
+  too. The footnote popover sits outside the note and had no selection
+  colour of its own; it takes the tint too.
 
 - Fixed: with line numbers off, the text started 33 px from the left (the
   change bars, a 24 px fold column and padding) but ran to the right edge.

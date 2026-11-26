@@ -330,6 +330,19 @@
   padding: 0;
   line-height: 1.3;
 }
+/*
+ * A cell's selection is drawn by the note's layer (cell-editor.ts), shaped and
+ * tinted as in the note (base.css), so CodeMirror's stock layer is hidden. The
+ * browser's own selection is cleared too: the note's rule that tints a focused
+ * field would otherwise tint the cell's text a second time, behind the layer.
+ */
+#app .hybrid-table .cm-editor > .cm-scroller > .cm-selectionLayer {
+  display: none;
+}
+#app .hybrid-table .cm-content:focus::selection,
+#app .hybrid-table .cm-content:focus ::selection {
+  background-color: transparent !important;
+}
 
 /* Column width drag: a column's right border, in any row (column-resize.ts). */
 .hybrid-table.table-col-resize-hover,

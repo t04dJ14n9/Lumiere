@@ -130,6 +130,12 @@ export interface EditorService {
   readonly settings: Infer<typeof editorConfig>;
   /** Own a modal caret source through the same extension registration as its keys. */
   caret(source: CaretModeSource): Extension;
+  /**
+   * How the note draws a selection (a rounded tint, squared where the caret
+   * meets it), for a nested editor to draw its own the same way. Pair it
+   * with `drawSelection()`, which hides the browser's selection.
+   */
+  readonly selection: Extension;
   readonly clipboard: {
     read(): Promise<string>;
     write(text: string): Promise<void>;
