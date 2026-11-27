@@ -32,6 +32,8 @@ vault over.
 
 ### Writing
 
+![Typing a note in Live Preview, with the Markdown Outline beside it: headings, bold text, inline math, a wikilink from the link suggestions, a callout and a task render as you type; the outline nests the sections, opens the one the caret is in and folds the one it left; moving the caret back into the paragraph shows its bold markers again.](https://raw.githubusercontent.com/t04dJ14n9/Lumiere/main/docs/media/markdown-live-preview.gif)
+
 - **Live Preview.** Formatting renders in place and its syntax shows only
   around the caret or selection. **Toggle Live Preview/Source Mode** (or the
   `lumiere.markdown.editor.defaultMode` setting) switches a note to Source
@@ -62,6 +64,8 @@ vault over.
   apart from the code editor's, and the host's spellchecker.
 
 ### Linking and navigation
+
+![A note with its backlinks in the Explorer: Ctrl-hovering a wikilink previews the linked note, and its Open button opens it, with that note's backlinks.](https://raw.githubusercontent.com/t04dJ14n9/Lumiere/main/docs/media/markdown-links.gif)
 
 - **Links like a vault's.** `[[Note]]`, `[[Note|alias]]`, `[[Note#Heading]]`
   and `[[Note#^block]]` resolve by Obsidian's rules (case-insensitive, `.md`
@@ -122,6 +126,12 @@ vault over.
 
 ### PDF
 
+![Reading a paper: scrolling with dark paper, jumping to a section from the PDF Outline view, zooming, switching to two-page spreads and to normal page colours.](https://raw.githubusercontent.com/t04dJ14n9/Lumiere/main/docs/media/pdf-reader.gif)
+
+The paper in these recordings is [YaRN](https://arxiv.org/abs/2309.00071v3)
+(Peng et al., CC BY 4.0), annotated in the
+[sample vault](https://github.com/t04dJ14n9/lumiere-sample-vault).
+
 - **A reader built on [EmbedPDF](https://www.embedpdf.com/)** and the PDFium
   engine, running in a worker. Single pages or two-page spreads, continuous
   or page-by-page, vertical or horizontal, zoom and fit, find, internal and
@@ -145,6 +155,8 @@ vault over.
 - Dark paper that follows the theme, Zen mode, and macOS Look Up.
 
 ### Agents
+
+![Selecting a sentence in the paper and choosing Copy link to this from its context menu, then pasting into a note beside it: an @path#page=1 link and the quoted passage.](https://raw.githubusercontent.com/t04dJ14n9/Lumiere/main/docs/media/pdf-copy-link.gif)
 
 - **Copy link to this.** In a note it copies an `@notes/a.md#12-18` link to
   the selected lines and the passage quoted under it (a note with unsaved
