@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.41 (2026-11-28)
 
 - Markdown: selecting text just below a Mermaid diagram no longer reveals
   the diagram's source the first time. In a note shorter than the pane,
