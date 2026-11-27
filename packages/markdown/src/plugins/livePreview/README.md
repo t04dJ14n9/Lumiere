@@ -1,7 +1,10 @@
 # Live Preview
 
 Renders Markdown in place and reveals syntax around the caret, like Obsidian's
-Live Preview. Each panel can switch between Live Preview and Source mode.
+Live Preview. Each panel can switch between Live Preview and Source mode. In
+VS Code and Cursor, **Toggle Live Preview/Source Mode** opens the note in the
+host's text editor instead, as **Toggle Text Editor** does; hosts without
+their own text editor (DSH, the app) switch to Lumiere's Source mode.
 
 ## How it works
 

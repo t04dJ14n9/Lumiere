@@ -70,6 +70,7 @@ export function createActiveEditor(): ActiveEditor {
       ),
     closeSiblingTabs: closeToggleSiblingTabs,
     customEditorViewType: activeCustomEditorViewType,
+    hasTextEditor: true,
   };
 }
 

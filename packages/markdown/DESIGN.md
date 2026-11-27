@@ -897,8 +897,10 @@ One function, `revealed(state, from, to, kind)`, used by every renderer:
 
 - **Live Preview** and **Source mode**, per view. The default comes from
   `lumiere.markdown.editor.defaultMode`. **Toggle Live Preview/Source Mode**
-  switches the active view. Source mode removes all Live Preview decorations
-  and shows properties as YAML; the inline title stays.
+  switches the active view; in VS Code and Cursor it opens the note in the
+  host's text editor instead (as **Toggle Text Editor** does). Source mode
+  removes all Live Preview decorations and shows properties as YAML; the
+  inline title stays.
 - Vertical motion: ArrowUp and ArrowDown step over a rendered block as one
   line (Obsidian behaviour). Escape inside revealed block source moves past
   the block (`leaveBlockSource`, kept).

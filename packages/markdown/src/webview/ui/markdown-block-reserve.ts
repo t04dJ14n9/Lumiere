@@ -44,6 +44,7 @@ export function releaseReserveOnceMounted(
         shell.style.minHeight = "";
         // Measure again in this frame, so CodeMirror holds the text still
         // before the new height is painted, not a frame after.
+        mustMeasureLines(view);
         view.requestMeasure(MEASURE_AGAIN);
       }
     },
@@ -51,6 +52,25 @@ export function releaseReserveOnceMounted(
 }
 
 const MEASURE_AGAIN = { key: "markdown-block-reserve", read: () => {} };
+
+/**
+ * Make CodeMirror's next measure read every drawn line's height. It reads
+ * them only when it redrew or `.cm-content` changed height, and a note
+ * shorter than the pane keeps `.cm-content` at the pane's height
+ * (`min-height: 100%`). So a block whose reserve went kept its reserved
+ * height in the height map, and a press on the lines below it landed inside
+ * it. CodeMirror has no public call for this: `mustMeasureContent` is
+ * internal (6.43.15; 6.44 re-measures on any DOM mutation but breaks typing
+ * over a line break, so it is not used yet).
+ */
+function mustMeasureLines(view: EditorView): void {
+  const state = (
+    view as unknown as { viewState?: { mustMeasureContent?: unknown } }
+  ).viewState;
+  if (state && state.mustMeasureContent === false) {
+    state.mustMeasureContent = true;
+  }
+}
 
 /** Tell parts still rendering that their block is back (see RENDER_REMOUNT_EVENT). */
 export function announceRemount(body: HTMLElement): void {

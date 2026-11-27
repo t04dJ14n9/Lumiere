@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: selecting text just below a Mermaid diagram no longer reveals
+  the diagram's source the first time. In a note shorter than the pane,
+  CodeMirror kept the height the diagram held while it rendered, so the
+  first press below it landed inside the diagram.
+- Markdown: in VS Code and Cursor, **Toggle Live Preview/Source Mode** and
+  the mode on the status bar open the note in VS Code's text editor, as
+  **Toggle Text Editor** (Ctrl/Cmd+E) does. A note already in Lumiere's
+  Source mode (the default mode setting) goes back to Live Preview.
+
 ## 0.1.40 (2026-11-27)
 
 - Markdown: a note opens calmly. The Properties sheet's rows (names and

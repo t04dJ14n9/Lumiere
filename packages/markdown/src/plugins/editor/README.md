@@ -259,12 +259,14 @@ text tab it opens is then kept as the reader's. After `openWith`, the previous
 view's tab for the same URI is closed in the active group (clean tabs only),
 so the toggle leaves one tab rather than Lumiere + Text Editor side by side
 (BH-011 / BH-003). This is **not** Obsidian's Ctrl/Cmd+E (Live Preview ↔
-Source); Source mode stays on the unbound **Toggle Live Preview/Source Mode**
-command. Selection and caret are not restored across the switch
-(`vscode.openWith` carries no range). In a text editor the key is bound only
-where the toggle acts, a `.md` file's own editor: a diff editor, an untitled
-buffer or a notebook cell keeps VS Code's Ctrl+E (Quick Open) and Cmd+E (Use
-Selection for Find).
+Source). In VS Code and Cursor the unbound **Toggle Live Preview/Source
+Mode** command runs this toggle too, so Source mode there is the host's text
+editor; a note already in Lumiere's Source mode goes back to Live Preview,
+and hosts without a text editor keep Lumiere's Source mode. Selection and
+caret are not restored across the switch (`vscode.openWith` carries no
+range). In a text editor the key is bound only where the toggle acts, a `.md`
+file's own editor: a diff editor, an untitled buffer or a notebook cell keeps
+VS Code's Ctrl+E (Quick Open) and Cmd+E (Use Selection for Find).
 
 **Open as Text** keeps the text editor. A just-reclaimed note also
 ignores repeated tab notifications for 10 s; an explicit native command jump
