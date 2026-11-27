@@ -1,6 +1,6 @@
 import type { Plugin } from "@workshop/core";
 import { contributionId } from "../../shared/setting-schema";
-import type {} from "../editor/api";
+import type { EditorPanel } from "../editor/api";
 import { protocol } from "../commands/protocol";
 import { protocol as editorProtocol } from "../editor/protocol";
 import { registerModeStatus } from "./mode-status";
@@ -22,9 +22,7 @@ export const livePreviewHost: Plugin = {
           // Live Preview.
           if (
             ctx.activeEditor.hasTextEditor &&
-            (!panel ||
-              (await panel.rpc.call(editorProtocol, "captureView", {})).mode !==
-                "source")
+            (await modeOf(panel)) !== "source"
           ) {
             return ctx.hostCommands.execute(contributionId("toggleTextEditor"));
           }
@@ -37,3 +35,14 @@ export const livePreviewHost: Plugin = {
     registerModeStatus(ctx);
   },
 };
+
+/** The panel's mode; undefined when there is none or it cannot answer yet. */
+async function modeOf(
+  panel: EditorPanel | undefined,
+): Promise<string | undefined> {
+  try {
+    return (await panel?.rpc.call(editorProtocol, "captureView", {}))?.mode;
+  } catch {
+    return undefined;
+  }
+}
