@@ -2,6 +2,21 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: selecting text just below a Mermaid diagram revealed the
+  diagram's source the first time. In a note shorter than the pane,
+  CodeMirror kept the height the diagram reserved while it rendered, so a
+  press on the first lines below it landed inside the diagram. Dropping a
+  block's reserve now makes CodeMirror read the line heights again.
+  (`@codemirror/view` 6.44 fixes this itself but adds a trailing newline
+  when you type over a selection that ends at a line start, so it stays on
+  6.43.15.)
+
+- Changed: in VS Code and Cursor, **Toggle Live Preview/Source Mode** (and
+  the mode in the status bar) opens the note in the built-in text editor, as
+  **Toggle Text Editor** does; a note already in Lumiere's Source mode (the
+  default mode setting) goes back to Live Preview. DSH and the app keep
+  Lumiere's own Source mode.
+
 - Changed: opening a note is calmer. The first-paint snapshot and Live
   Preview's placeholder draw the Properties sheet's own rows (a line scan of
   the frontmatter, no YAML parse), muted, in the sheet's classes, so the

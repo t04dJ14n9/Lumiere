@@ -102,6 +102,63 @@ test("every editor manifest command routes to its registered webview ID", async 
   await f.root.dispose();
   assert.equal(native.size, 0);
 });
+for (const [mode, expected] of [
+  ["livePreview", { host: ["toggleTextEditor"], webview: [] }],
+  ["source", { host: [], webview: ["editor:toggle-source"] }],
+] as const) {
+  test(`Toggle Live Preview/Source Mode from ${mode} where the host has a text editor`, async () => {
+    const native = new Map<string, () => unknown>();
+    const executed: string[] = [];
+    const webview: string[] = [];
+    const root = createRoot();
+    root.provide("editors", {
+      all: () => [],
+      active: () =>
+        ({
+          rpc: {
+            call: async (
+              _protocol: unknown,
+              method: string,
+              payload: unknown,
+            ) =>
+              method === "captureView"
+                ? { mode }
+                : webview.push((payload as { command: string }).command),
+          },
+        }) as unknown as EditorPanel,
+      capture: async () => {
+        throw new Error("unused");
+      },
+      restore: async () => {},
+    });
+    provideHostServices(
+      root,
+      fakeHost({
+        activeEditor: { hasTextEditor: true },
+        hostCommands: {
+          register: (id, run) => {
+            native.set(id, run);
+            return () => {
+              native.delete(id);
+            };
+          },
+          execute: async (id) => {
+            executed.push(id);
+          },
+        },
+      }),
+    );
+    root.plugin(livePreviewHost);
+    await root.settled();
+    await native.get(contributionId("toggleSourceMode"))!();
+    assert.deepEqual(
+      executed,
+      expected.host.map((id) => contributionId(id)),
+    );
+    assert.deepEqual(webview, expected.webview);
+    await root.dispose();
+  });
+}
 test("registered swap-line commands edit pure EditorState and preserve the moved selection", async () => {
   const f = fixture();
   await f.configure({ formatting: { enabled: true, config: {} } });

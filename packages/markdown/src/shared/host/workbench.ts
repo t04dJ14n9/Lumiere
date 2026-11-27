@@ -178,4 +178,9 @@ export interface ActiveEditor {
   closeSiblingTabs(uri: string, keep: "text" | "lumiere"): Promise<void>;
   /** The view type of the custom editor in the active tab, if one is there. */
   customEditorViewType(): string | undefined;
+  /**
+   * Whether the host has its own text editor to open a note in (VS Code). Then
+   * Toggle Live Preview/Source Mode opens it instead of Lumiere's Source mode.
+   */
+  readonly hasTextEditor?: boolean;
 }
