@@ -2,6 +2,12 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: selecting a multi-line Mermaid label drew darker stripes where its
+  lines meet. Mermaid sets the lines 1.1em apart, closer than the boxes the
+  browser highlights, and the see-through selection tint doubled where they
+  overlapped. Selection inside a diagram now uses `--selection-solid`, the
+  same tint mixed onto the editor background.
+
 - Fixed: selecting text just below a Mermaid diagram revealed the
   diagram's source the first time. In a note shorter than the pane,
   CodeMirror kept the height the diagram reserved while it rendered, so a

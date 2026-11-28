@@ -39,6 +39,14 @@ pre[data-fence="mermaid"] svg {
 pre[data-fence="mermaid"] svg text {
   cursor: text;
 }
+/*
+ * Mermaid sets a label's lines 1.1em apart, closer than the boxes the
+ * browser highlights for them, so the see-through note tint (base.css)
+ * doubles where neighbouring lines meet. A solid tint shows no seams.
+ */
+#app .cm-content pre[data-fence="mermaid"] svg ::selection {
+  background: var(--selection-solid);
+}
 pre[data-fence="mermaid"] svg .internal-link,
 pre[data-fence="mermaid"] svg .internal-link text,
 pre[data-fence="mermaid"] svg .internal-link tspan {
