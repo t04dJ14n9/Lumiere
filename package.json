@@ -2,7 +2,7 @@
   "name": "lumiere",
   "displayName": "Lumiere: Obsidian-style Notes and PDF Reader",
   "description": "Obsidian-style Live Preview for Markdown notes and a fast PDF reader, in VS Code and Cursor, with links your AI agent can follow.",
-  "version": "0.1.42",
+  "version": "0.1.43",
   "publisher": "t04dj14n9",
   "license": "MIT",
   "icon": "media/icon.png",

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.43 (2026-11-29)
 
 - Markdown: a note opened from Git history (Timeline, Source Control, a
   `git:` link) shows its images again. Its vault was looked up from the
