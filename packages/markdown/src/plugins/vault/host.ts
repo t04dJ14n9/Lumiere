@@ -1,4 +1,5 @@
 import type { Plugin } from "@workshop/core";
+import { noteRevision } from "../../shared/git";
 import type {} from "./api";
 import { VaultRegistry } from "./registry";
 
@@ -36,10 +37,13 @@ export const vaultsHost: Plugin = {
 /** Panel-level half: the `vault` service for the note open in this panel. */
 export const vaultHost: Plugin<{ documentUri: string }> = {
   name: "vault",
-  inject: { required: ["vaults"] },
+  inject: { required: ["vaults"], optional: ["git"] },
   provides: ["vault"],
   async apply(ctx, { documentUri }) {
-    const vault = await ctx.vaults.forDocument(documentUri);
+    const { source } = ctx.git
+      ? noteRevision(ctx.git, documentUri)
+      : { source: documentUri };
+    const vault = await ctx.vaults.forDocument(source);
     ctx.provide("vault", vault.index);
   },
 };

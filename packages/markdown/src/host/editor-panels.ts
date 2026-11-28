@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import type { EditorProvider } from "../shared/editor-provider";
+import { noteRevision } from "../shared/git";
+import { gitSource } from "./git-source";
 import type { PanelShell } from "../shared/host";
 import { SourceCoordinates } from "../shared/document/coordinates";
 import { panelIsActive } from "./active-panel";
@@ -145,9 +147,13 @@ function panelResourceRoots(
   document: vscode.TextDocument,
   extensionUri: vscode.Uri,
 ): vscode.Uri[] {
+  // A note from Git history (`git:`) embeds its file's neighbours on disk.
+  const note = vscode.Uri.parse(
+    noteRevision({ sourceOf: gitSource }, document.uri.toString()).source,
+  );
   const root =
-    vscode.workspace.getWorkspaceFolder(document.uri)?.uri ??
-    vscode.Uri.joinPath(document.uri, "..");
+    vscode.workspace.getWorkspaceFolder(note)?.uri ??
+    vscode.Uri.joinPath(note, "..");
   return [
     vscode.Uri.joinPath(extensionUri, "dist", "markdown"),
     pdfViewerAssets(extensionUri),

@@ -2,6 +2,14 @@
 
 ## 0.1.0 (unreleased)
 
+- Fixed: a note opened from Git history (a `git:` URI) said its images
+  "could not be found". `vaultHost` and `resourcesHost` took the panel's
+  `git:` URI as the note, and VS Code places a `git:` URI in no workspace
+  folder, so the note got a loose vault holding only its own folder. Both
+  now use the file the URI names (`noteRevision`), the webview may load
+  from that file's workspace folder, and an image shows its bytes at the
+  note's commit, as the rendered diff does.
+
 - Fixed: selecting a multi-line Mermaid label drew darker stripes where its
   lines meet. Mermaid sets the lines 1.1em apart, closer than the boxes the
   browser highlights, and the see-through selection tint doubled where they

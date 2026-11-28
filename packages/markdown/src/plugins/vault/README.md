@@ -12,7 +12,8 @@ starts from the snapshot saved by the previous session, so links resolve at
 once, then lists the vault, parses only notes whose time or size changed (in
 a worker, one at a time) and follows file events. While a note is open, its
 unsaved text replaces the file on disk. Each panel's half provides `vault`,
-the shared index of its note's vault.
+the shared index of its note's vault. A note opened from Git history (a
+`git:` URI) has the vault of the file the URI names.
 
 In VS Code a listing stats only the notes before it returns: their time and
 size decide which parses the snapshot can reuse. The other files, most of a
@@ -60,8 +61,9 @@ The VS Code adapter is `src/host/vault-system.ts`; the worker is
 
 ## Services, events and settings
 
-- Injects `vaultSystem` (root), optionally `navigation` (root), and `vaults`
-  (panel). Provides `vaults` and `vault`.
+- Injects `vaultSystem` (root), optionally `navigation` (root), `vaults`
+  (panel) and optionally the host service `git` (panel). Provides `vaults`
+  and `vault`.
 - Emits `vault/changed (root, change)` and `vault/resolved (root)`.
 - Settings: `lumiere.markdown.vault.rootMarkers` (default `[".obsidian"]`),
   `lumiere.markdown.vault.excludedFiles`,
