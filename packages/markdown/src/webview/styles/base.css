@@ -169,6 +169,12 @@ button {
     var(--selection-accent) 18%,
     transparent
   );
+  /* The tint already laid over the editor background (diagrams.css). */
+  --selection-solid: color-mix(
+    in oklch,
+    var(--selection-accent) 33%,
+    var(--vscode-editor-background, #fff)
+  );
 }
 body.vscode-light,
 body.vscode-high-contrast-light {
@@ -181,6 +187,11 @@ body.vscode-high-contrast-light {
     in oklch,
     var(--selection-accent) 11%,
     transparent
+  );
+  --selection-solid: color-mix(
+    in oklch,
+    var(--selection-accent) 20%,
+    var(--vscode-editor-background, #fff)
   );
 }
 /* CodeMirror's full-width selection; editor/selection-layer.ts draws ours. */

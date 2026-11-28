@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: selecting a Mermaid label that wraps over several lines no
+  longer shows darker stripes between the lines. The selection inside a
+  diagram uses a solid tint, so the overlapping line highlights do not
+  stack.
+
 ## 0.1.41 (2026-11-28)
 
 - Markdown: selecting text just below a Mermaid diagram no longer reveals
