@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.42 (2026-11-28)
 
 - Markdown: selecting a Mermaid label that wraps over several lines no
   longer shows darker stripes between the lines. The selection inside a
