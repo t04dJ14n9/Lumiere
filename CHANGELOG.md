@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Markdown: a note opened from Git history (Timeline, Source Control, a
+  `git:` link) shows its images again. Its vault was looked up from the
+  `git:` link, which VS Code places in no workspace folder, so a link from
+  the vault root such as `/assets/chart.png` was "not found". The note now
+  uses its file's vault, and images show as they were at that commit. An
+  image since moved or deleted is still "not found".
+
 ## 0.1.42 (2026-11-28)
 
 - Markdown: selecting a Mermaid label that wraps over several lines no

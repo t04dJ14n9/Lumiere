@@ -42,6 +42,11 @@ just before (the same notes in the same order), and every entry otherwise.
 The page keeps its copy (`PageBaseSnapshot`) and hands each base embed the
 whole list, so twenty base embeds in a note cost one snapshot, not twenty.
 
+A note opened from Git history (a `git:` URI) resolves its links as its file
+does (`noteRevision`). Each image it shows is sent inline, as a `data:` URL
+of its bytes at the note's revision; one that revision does not have keeps
+the working tree's URL.
+
 ## Files
 
 - `manifest.ts`: core plugin metadata and surfaces.
@@ -49,6 +54,7 @@ whole list, so twenty base embeds in a note cost one snapshot, not twenty.
 - `protocol.ts`: load request/result schemas.
 - `host.ts`: service and RPC registration.
 - `diff-resources.ts`: independent diff-side resolution and Git revision selection.
+- `revision-image.ts`: an image's bytes at the revision of a note from Git history.
 - `note-resources.ts`: known-source authorization, target containment, contained reads, kind selection and missing links.
 - `base-snapshot.ts`: the panel's snapshot of the notes for base embeds, and what a reply sends of it.
 - `page-base-snapshot.ts`: the page's copy of that snapshot, completed from each reply.
@@ -75,7 +81,10 @@ resolution for standalone diff panels.
 ## Limits and differences from Obsidian
 
 Only contained vault links are loadable; external URLs and unknown source notes
-are rejected. Obsidian does not resolve links into hidden folders at all;
+are rejected. In a note from Git history, links resolve against the files
+there are now, so an image moved or deleted since that revision is not
+found; note, media, PDF and base embeds show the working tree.
+Obsidian does not resolve links into hidden folders at all;
 Lumiere resolves Markdown links there, as its clicks do, but a wikilink only
 through the index (a fragment-only one, naming its own note, excepted), and a file found on disk is not watched, so a page that
 showed it is not told when it changes. Virtual filesystem symlinks are refused. Notes use the `.md`

@@ -1,29 +1,36 @@
 import type { Context, Plugin } from "@workshop/core";
+import { noteRevision } from "../../shared/git";
 import type { PanelShell } from "../../shared/host";
 import type {} from "../vault/api";
 import { NoteResources } from "./note-resources";
 import { protocol } from "./protocol";
+import { atRevision } from "./revision-image";
 export const resourcesHost: Plugin<{ panel: PanelShell }> = {
   name: "resources",
-  inject: { required: ["rpc", "vault", "workspace", "hostDocuments"] },
+  inject: { required: ["rpc", "vault", "workspace", "hostDocuments", "git"] },
   provides: ["resources"],
   apply(ctx, { panel }) {
+    // A note from Git history resolves its links as its file does.
+    const note = noteRevision(ctx.git, panel.document.uri);
     const resources = new NoteResources({
-      source: panel.document.uri,
+      source: note.source,
       vault: ctx.vault,
       host: ctx,
       resourceUrl: (uri) => panel.resource(uri),
     });
     ctx.provide("resources", resources);
     ctx.effect(() =>
-      ctx.rpc.handle(protocol, "load", (params) =>
-        resources.load(
+      ctx.rpc.handle(protocol, "load", async (params) => {
+        const resource = await resources.load(
           params.target,
-          params.source,
+          params.source === panel.document.uri ? note.source : params.source,
           params.syntax,
           params.snapshot,
-        ),
-      ),
+        );
+        return note.ref === undefined
+          ? resource
+          : atRevision(resource, note.ref, ctx);
+      }),
     );
     // Any change can change a base's entries (a note's properties, links
     // or backlinks); the index also resolves again after silent updates.

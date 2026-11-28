@@ -75,6 +75,22 @@ export interface GitAccess {
   sourceOf(uri: string): { source: string; ref?: string };
 }
 
+/**
+ * The file a panel's note is and the revision it shows: a note opened from
+ * Git history (a `git:` URI) is its file at a commit, and its vault, links
+ * and embeds are that file's. A `git:` URI Git cannot read is its own source.
+ */
+export function noteRevision(
+  git: Pick<GitAccess, "sourceOf">,
+  uri: string,
+): { source: string; ref?: string } {
+  try {
+    return git.sourceOf(uri);
+  } catch {
+    return { source: uri };
+  }
+}
+
 /** A text diff tab VS Code opened for a Markdown file (Source Control, Timeline). */
 export interface OpenedDiff {
   readonly original: string;
